@@ -89,6 +89,16 @@ const APPS = [
     accent: "#f59e0b"
   },
   {
+    id: "rpg",
+    title: "深淵の怪談",
+    description: "クトゥルフ神話TRPGをベースにしたドラクエ風RPG。理性（SAN）を削られながら、深海神官に挑め。",
+    tags: ["ゲーム", "RPG", "JavaScript"],
+    thumbnail: "🐙",
+    path: "apps/rpg/index.html",
+    category: "game",
+    accent: "#4a8cc0"
+  },
+  {
     id: "shogi",
     title: "将棋",
     description: "コンピュータと対局できる本格将棋。持ち駒・成り・打ち歩詰めなど完全ルール対応。難易度3段階。",

@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>深淵の怪談 ―さいはての漁村―</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap');
+:root{
+  --bg:#06090f;--panel:#0a1020;--panel2:#0d1828;
+  --bdr:#1a3050;--bdr2:#2a4060;
+  --txt:#cdc5a8;--txt2:#a09880;
+  --acc:#4a8cc0;--acc2:#6aaae0;
+  --hp:#e04848;--mp:#4870d8;--san:#d0a030;
+  --gold:#c8982a;--green:#3a9870;
+  --red:#e05050;--warn:#e0a030;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);color:var(--txt);
+  font-family:'Noto Serif JP',serif;
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:8px;
+}
+#app{
+  width:100%;max-width:680px;
+  min-height:520px;
+  display:flex;flex-direction:column;
+  border:1px solid var(--bdr);border-radius:4px;
+  background:var(--panel);overflow:hidden;
+  box-shadow:0 0 40px rgba(74,140,192,.15),0 0 80px rgba(0,0,0,.8);
+}
+
+/* ── TITLE ── */
+#s-title{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:40px 24px;gap:24px;
+  background:radial-gradient(ellipse at center,#0d1828 0%,#06090f 100%);
+}
+.title-deco{font-size:1.8rem;letter-spacing:.3em;color:var(--acc);opacity:.6;}
+.title-main{font-size:1.6rem;font-weight:700;color:var(--txt);letter-spacing:.12em;text-align:center;line-height:1.6;}
+.title-sub{font-size:.78rem;color:var(--txt2);letter-spacing:.2em;}
+.title-start{
+  margin-top:8px;padding:12px 40px;
+  background:none;border:1px solid var(--bdr2);border-radius:2px;
+  color:var(--txt);font-size:.9rem;font-family:inherit;cursor:pointer;
+  letter-spacing:.2em;transition:all .2s;
+}
+.title-start:hover{border-color:var(--acc2);color:var(--acc2);box-shadow:0 0 16px rgba(74,140,192,.3);}
+
+/* ── STORY / NOVEL ── */
+#s-story{flex:1;display:flex;flex-direction:column;}
+.story-bg{
+  flex:1;min-height:200px;
+  display:flex;align-items:flex-end;justify-content:center;
+  padding:0 0 12px;position:relative;overflow:hidden;
+}
+.story-bg-img{
+  position:absolute;inset:0;opacity:.18;
+  background-size:cover;background-position:center;
+  filter:blur(1px);
+}
+.story-portrait{
+  font-size:5rem;opacity:.85;
+  text-shadow:0 0 20px rgba(74,140,192,.5);
+  z-index:1;
+}
+.story-box{
+  border-top:1px solid var(--bdr);background:rgba(6,9,15,.92);
+  padding:16px 20px;min-height:160px;cursor:pointer;position:relative;
+}
+.story-speaker{
+  font-size:.72rem;letter-spacing:.2em;color:var(--acc2);
+  margin-bottom:8px;
+}
+.story-text{
+  font-size:.9rem;line-height:1.95;color:var(--txt);
+  white-space:pre-wrap;min-height:80px;
+}
+.story-next{
+  position:absolute;bottom:12px;right:16px;
+  font-size:.7rem;color:var(--txt2);opacity:.6;
+  animation:blink 1.2s infinite;
+}
+@keyframes blink{0%,100%{opacity:.2}50%{opacity:.8}}
+
+/* ── EXPLORE ── */
+#s-explore{flex:1;display:flex;flex-direction:column;}
+.explore-header{
+  padding:12px 16px;border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.explore-loc{font-size:.8rem;color:var(--acc2);letter-spacing:.1em;}
+.explore-body{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;}
+.explore-desc{font-size:.82rem;line-height:1.8;color:var(--txt2);padding:8px 0;}
+.menu-title{font-size:.7rem;letter-spacing:.15em;color:var(--txt2);margin-bottom:6px;}
+.menu-list{display:flex;flex-direction:column;gap:5px;}
+.menu-btn{
+  background:none;border:1px solid var(--bdr);border-radius:2px;
+  color:var(--txt);font-size:.85rem;font-family:inherit;
+  padding:8px 14px;cursor:pointer;text-align:left;
+  transition:all .15s;
+}
+.menu-btn:hover:not(:disabled){border-color:var(--acc);color:var(--acc2);background:rgba(74,140,192,.06);}
+.menu-btn:disabled{opacity:.3;cursor:default;}
+.menu-btn.highlight{border-color:var(--warn);color:var(--warn);}
+
+/* ── STATUS BAR ── */
+.status-bar{
+  border-top:1px solid var(--bdr);padding:8px 16px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  background:rgba(6,9,15,.7);font-size:.72rem;
+}
+.sb-item{display:flex;flex-direction:column;gap:2px;}
+.sb-label{color:var(--txt2);letter-spacing:.1em;}
+.sb-val{font-weight:700;}
+.sb-val.hp{color:var(--hp);}
+.sb-val.mp{color:var(--mp);}
+.sb-val.san{color:var(--san);}
+.sb-val.lv{color:var(--gold);}
+.bar{height:4px;border-radius:2px;background:var(--bdr);overflow:hidden;margin-top:2px;}
+.bar-fill{height:100%;border-radius:2px;transition:width .3s;}
+.bar-hp{background:var(--hp);}
+.bar-mp{background:var(--mp);}
+.bar-san{background:var(--san);}
+
+/* ── BATTLE ── */
+#s-battle{flex:1;display:flex;flex-direction:column;}
+.battle-top{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:20px;gap:12px;
+  background:radial-gradient(ellipse at bottom,#0a1428 0%,#06090f 100%);
+}
+.enemy-art{
+  font-size:4rem;line-height:1;
+  text-shadow:0 0 20px rgba(255,100,50,.4);
+  animation:float 3s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.enemy-name{font-size:.95rem;font-weight:700;letter-spacing:.1em;color:var(--txt);}
+.enemy-hp-wrap{width:200px;}
+.enemy-hp-label{font-size:.65rem;color:var(--txt2);margin-bottom:3px;text-align:center;}
+.enemy-hp-bar{height:8px;background:var(--bdr);border-radius:4px;overflow:hidden;}
+.enemy-hp-fill{height:100%;background:var(--hp);transition:width .4s;}
+.battle-msg{
+  border-top:1px solid var(--bdr);padding:12px 16px;min-height:80px;
+  background:rgba(6,9,15,.9);font-size:.88rem;line-height:1.8;
+  white-space:pre-wrap;
+}
+.battle-cmds{
+  border-top:1px solid var(--bdr);padding:10px 12px;
+  display:grid;grid-template-columns:1fr 1fr;gap:6px;
+}
+.bcmd{
+  background:var(--panel2);border:1px solid var(--bdr);border-radius:2px;
+  color:var(--txt);font-size:.82rem;font-family:inherit;
+  padding:8px 10px;cursor:pointer;text-align:left;
+  transition:all .15s;letter-spacing:.05em;
+}
+.bcmd:hover:not(:disabled){border-color:var(--acc);color:var(--acc2);background:rgba(74,140,192,.08);}
+.bcmd:disabled{opacity:.3;cursor:default;}
+.spell-list,.item-list{
+  border-top:1px solid var(--bdr);padding:10px 12px;
+  display:flex;flex-direction:column;gap:5px;
+}
+.spell-btn,.item-btn{
+  background:none;border:1px solid var(--bdr);border-radius:2px;
+  color:var(--txt);font-size:.8rem;font-family:inherit;
+  padding:7px 12px;cursor:pointer;text-align:left;transition:all .15s;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.spell-btn:hover:not(:disabled){border-color:var(--mp);color:#8aaaf0;}
+.item-btn:hover:not(:disabled){border-color:var(--green);color:#5abf90;}
+.spell-btn:disabled,.item-btn:disabled{opacity:.3;cursor:default;}
+.spell-cost{font-size:.7rem;color:var(--mp);}
+.item-count{font-size:.7rem;color:var(--txt2);}
+.back-btn{
+  background:none;border:1px solid var(--bdr);border-radius:2px;
+  color:var(--txt2);font-size:.75rem;font-family:inherit;
+  padding:5px 12px;cursor:pointer;margin-top:2px;
+}
+.back-btn:hover{border-color:var(--bdr2);color:var(--txt);}
+
+/* ── LEVELUP / GAMEOVER / ENDING ── */
+.overlay-screen{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:40px 24px;gap:20px;
+  text-align:center;
+}
+.overlay-title{font-size:1.4rem;font-weight:700;letter-spacing:.15em;}
+.overlay-body{font-size:.85rem;line-height:2;color:var(--txt2);}
+.overlay-btn{
+  padding:10px 36px;background:none;border:1px solid var(--bdr2);
+  color:var(--txt);font-size:.88rem;font-family:inherit;cursor:pointer;
+  letter-spacing:.15em;border-radius:2px;transition:all .2s;
+}
+.overlay-btn:hover{border-color:var(--acc2);color:var(--acc2);}
+
+/* ── SHOP ── */
+.shop-body{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
+.shop-item{
+  border:1px solid var(--bdr);border-radius:2px;padding:10px 14px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.shop-item-name{font-size:.85rem;}
+.shop-item-desc{font-size:.72rem;color:var(--txt2);}
+.shop-buy{
+  background:none;border:1px solid var(--gold);border-radius:2px;
+  color:var(--gold);font-size:.78rem;font-family:inherit;
+  padding:5px 14px;cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.shop-buy:hover:not(:disabled){background:rgba(200,152,42,.1);}
+.shop-buy:disabled{opacity:.3;cursor:default;}
+.gold-display{font-size:.8rem;color:var(--gold);letter-spacing:.1em;}
+</style>
+</head>
+<body><div id="app"></div>
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════
+
+// ─── STORY SCENES ────────────────────────────────────
+const SCENES = {
+  prologue:[
+    {bg:'fog', em:'🌊', sp:null, txt:'季節外れの霧が、列車の窓をすっかり白く覆っていた。\n\nタン、タン、と線路を刻む音だけが、時間の経過を知らせてくれる。\n外はもう——何も見えない。'},
+    {bg:'fog', em:'🌊', sp:'霧島 遼', txt:'（……着くまでに、もう少し情報を整理しておかないと）\n\n鞄から古びた手紙を取り出す。\n差出人欄には、「叔父・霧島 正朗」とある。\n消印は三週間前。それが、叔父からの最後の連絡だった。'},
+    {bg:'fog', em:'🌊', sp:null, txt:'手紙には、こう書かれていた。\n\n『遼へ。もしこれが届いたなら、私はおそらくこの村に留まれなくなっているだろう。漁村「淀ノ口」で、奇妙なものを見た。海が——変わりはじめている。頼む、私を探しに来てくれ』\n\n叔父は、民俗学の研究者だった。'},
+    {bg:'village', em:'🏚️', sp:null, txt:'列車が、きしんだ音を立てて停まった。\n\nホームに降り立つと、潮の臭いと、それ以外の何か——魚と腐敗の中間のような、説明しがたい臭気が鼻をついた。\n\n淀ノ口。\n人口三百名たらずの、さいはての漁村。'},
+    {bg:'village', em:'🏚️', sp:'老婆', txt:'「……あんた、よそ者かい」\n\n振り返ると、黒い頭巾をかぶった老婆が立っていた。\nその目が——妙に、横長に見えた。\n\n「ここには何もないよ。さっさと帰りな」\n\n老婆は足音もなく、霧の中へ消えていった。'},
+    {bg:'village', em:'🏚️', sp:'霧島 遼', txt:'（来るなと言われるほど、来なければならない気がしてくる）\n\n村の中心に向かって歩き出した。\n石畳は苔むし、どの家の扉も固く閉ざされている。\n\n——どこかで、水が滴る音がしていた。\n規則正しく。まるで、脈拍のように。'},
+  ],
+  village_enter:[
+    {bg:'village', em:'🏚️', sp:'霧島 遼', txt:'村の広場に出た。\n中央には枯れた井戸があり、その縁に奇妙な紋様が刻まれている。\n\n魚の骨、波、そして——人間の形をした何か。\n\n（叔父は、何を見たんだ……）'},
+    {bg:'village', em:'🏮', sp:'老漁師', txt:'「兄さん、ここは危ない」\n\nぼそりと、老いた漁師が声をかけてきた。\n帽子の影で目は見えない。その唇だけが、乾いて動く。\n\n「夜になる前に宿へ行くといい。それと……神社には近づくな」\n\n言い終える前に、漁師は踵を返した。'},
+    {bg:'village', em:'🏮', sp:'霧島 遼', txt:'（神社——か)\n\n逆に気になってしまうのが、探求者の性というものだ。\n\nともかく、まずはこの村を知ることが先決だ。\n村の古老か、宿屋の主人か——誰かが、真実を知っているはずだ。'},
+  ],
+  find_shrine:[
+    {bg:'shrine', em:'⛩️', sp:null, txt:'案内板も何もない小道を辿ると、草木の間に古い鳥居が立っていた。\n\n注連縄は腐り、鈴緒はとうに失われている。\n石段は波に洗われたように滑らかで、それでいて——異様なほど急だった。'},
+    {bg:'shrine', em:'⛩️', sp:'霧島 遼', txt:'本殿に近づいた瞬間、\n背筋に冷たいものが走った。\n\n祀られているのは、仏でも神道の神でもない。\n巨大な石碑に刻まれた像は——魚と人間が混ざり合い、\n無数の腕を広げて、海の底へと向かっていた。'},
+    {bg:'shrine', em:'📜', sp:'霧島 遼', txt:'碑の脇に、折り畳まれた紙が挟まっていた。\n叔父の筆跡だ。\n\n「この村の神は、ダゴン——深海に潜む古き神だ。村人の多くは知らず知らず、その信者になっている。儀式は毎月の新月に行われ、捧げ物には——」\n\nそこで文章は途切れていた。'},
+    {bg:'shrine', em:'📜', sp:'霧島 遼', txt:'（……叔父さんは、ここまで来ていた）\n\n紙を丁寧に折り直して、胸ポケットにしまう。\n\nその瞬間、背後で枯れ葉を踏む音がした。\n一歩。また一歩。\n\n静かすぎる足音が、こちらへ近づいてくる——'},
+  ],
+  beach_night:[
+    {bg:'beach', em:'🌑', sp:null, txt:'夜の浜辺は、昼間とは別の場所に思えた。\n\n月が雲に隠れ、波音だけが闇をみたす。\n砂浜に転々と、黒いシミが残っている。\n焚き火の跡か——それにしては、多すぎる。'},
+    {bg:'beach', em:'🌑', sp:'霧島 遼', txt:'懐中電灯の灯りで地面を照らすと、\n砂に何かが書かれているのがわかった。\n\n記号が、円を描くように並んでいる。\n中心には、まだ乾いていない赤い染みが。\n\n（儀式の跡、だ）'},
+    {bg:'beach', em:'🌊', sp:null, txt:'その時。\n\n沖に、灯りが見えた。\n\n一つ、二つ、三つ——\n ゆっくりと、こちらへ近づいてくる。\n\nそれが灯籠だと気づいた時には、\n砂を踏む水かきの音が、すぐ後ろまで来ていた。'},
+    {bg:'beach', em:'🌊', sp:'霧島 遼', txt:'咄嗟に身を伏せ、岩陰に隠れた。\n\n浜に上がってきたのは——人間の形をした、何かだった。\n両足で立ち、衣服を身に着けている。\nだが、皮膚が、月のない夜にも光って見えた。\n鱗のように。\n\n（……ここは、本当に危険だ）'},
+  ],
+  church_enter:[
+    {bg:'church', em:'⛪', sp:null, txt:'廃教会は、村の外れの崖上に建っていた。\n\n十字架は半ば崩れ、窓には板が打ち付けられている。\n近づくほどに、そこだけ空気が重くなる——\nそんな錯覚を覚えた。'},
+    {bg:'church', em:'⛪', sp:'霧島 遼', txt:'扉を押すと、驚くほど静かに開いた。\n\n内部は、かつての礼拝堂の面影を残しながら、\n別の何かへと作り変えられていた。\n\n長椅子は海に向けて並べ直され、\n祭壇の十字架には、あの魚人の石像が被せられている。'},
+    {bg:'church', em:'📖', sp:'霧島 遼', txt:'祭壇の下、石造りの床に、\n革装丁の古い本が置かれていた。\n\n表紙には金文字で、\n「深海への讃歌 Odes to the Abyss」\n\nページを開いた途端——文字が、なぜか、読めてしまった。\n\n（……これは）'},
+    {bg:'church', em:'📖', sp:'霧島 遼', txt:'本を読み進めるにつれ、\n頭の中に何かが流れ込んでくる感覚があった。\n\n恐ろしい。だが、目が離せない。\n\n気がつけば、窓の外はもう夜明けの色に変わっていた。\n——そして、私はいくつかの「言葉」を覚えていた。\n\n禁断の言葉を。'},
+    {bg:'church', em:'📖', sp:null, txt:'【呪文を習得した】\n禁断の炎、幻惑の暗示、精神防壁\n\nそして——「深海への讃歌」は、叔父がここに残したものだった。\n裏表紙に、短い書き置きがある。\n「遼へ。地下に行くな。……だが、もし来たなら、\n 奴の名前を呼べ。ナーガルと。それが弱点だ」'},
+  ],
+  underground_enter:[
+    {bg:'underground', em:'🌀', sp:null, txt:'教会の地下は、人間の手によって作られたものではなかった。\n\n巨大な石が精緻に組み上げられ、\n人一人がやっと通れる通路が、深く、深く続いている。\n壁には、おびただしい数の刻み文字が走っていた。'},
+    {bg:'underground', em:'🌀', sp:'霧島 遼', txt:'壁の文字を読む。\n\n「深淵の神よ、汝の子らを呼べ。\n 波が記憶し、岩が証言する。\n 眠れる偉大な者の夢の中で、\n 我らは永遠に泳ぐだろう——」\n\n（叔父さんは……どこに）'},
+    {bg:'underground', em:'🚪', sp:null, txt:'通路の果てに、重厚な扉が立ちふさがっていた。\n\n扉の向こうから、低い唸り声が聞こえてくる。\n海の底で鳴り続けるような、地の底の声。\n\n——叔父は、その向こうにいる。\n私は、扉に手をかけた。'},
+  ],
+  boss_intro:[
+    {bg:'abyss', em:'🐙', sp:null, txt:'扉の向こうは、広大な空洞だった。\n\n天井は見えない。\n床は濡れ、足を踏み出すたびに水が跳ねる。\n壁を覆う発光する苔が、すべてを青白く照らしていた。'},
+    {bg:'abyss', em:'🐙', sp:null, txt:'部屋の中央に、それはいた。\n\n人間よりも一回り大きく、\n青緑の鱗に覆われた体。\n魚の頭と、人間の胴体を持ち、\n四本の腕がそれぞれ何かを握っている。\n\n——深海司祭、ナーガル。'},
+    {bg:'abyss', em:'🐙', sp:'ナーガル', txt:'「……来たな、人の子よ」\n\n声は、波音に似ていた。\n胃の腑に染み込んでくるような、低く、重い声。\n\n「汝の叔父は、我らの神の夢を乱した。\n 今は、深き眠りの中で、安らかに休んでいる」'},
+    {bg:'abyss', em:'🐙', sp:'ナーガル', txt:'「汝も、そこへ招こう。\n 恐れるな。深淵は、拒まぬ」\n\n巨体がゆっくりと向きを変えた。\n\n目が——こちらを見た。\n黄金色に輝く、縦に割れた瞳が。\n\n（……戦うしかない）'},
+  ],
+  boss_win:[
+    {bg:'abyss', em:'💫', sp:null, txt:'ナーガルは、苦悶の声を上げながら後退した。\n\n「……人の子よ、汝は、我に傷を負わせた」\n\nその声に、初めて動揺の色が混じる。\n長い沈黙の後、巨体がよろめいた。'},
+    {bg:'abyss', em:'💫', sp:'ナーガル', txt:'「覚えておけ。\n 眠れる者はやがて目覚める。\n 深淵は、永遠だ——」\n\nそう言い残して、ナーガルは暗い水の中へと沈んでいった。\n波紋が広がり、やがて静まった。'},
+    {bg:'underground', em:'👤', sp:'叔父・正朗', txt:'「……遼か？」\n\n部屋の隅に、叔父が蹲っていた。\n憔悴しているが、生きている。\n\n「よくここまで来てくれた……。だが、遼、\n これはまだ終わっていない。\n 深淵は夢を見続ける」'},
+    {bg:'fog', em:'🌊', sp:null, txt:'叔父を支えながら、地上へ向かった。\n\n夜明けの光が、廃教会の扉から差し込んでくる。\n潮の臭い。波の音。\n\nだが今は——それが、少しだけ怖くなくなった気がした。\n\n霧の向こうには、朝がある。\n\n【第一章 完】\n次の冒険へ続く……'},
+  ],
+};
+
+// ─── ENEMIES ──────────────────────────────────────────
+const ENEMIES = {
+  cultist:{
+    name:'村人信者',em:'🧟',
+    hp:35,atk:10,def:4,agi:8,
+    san:5,exp:14,gold:8,
+    area:'village',
+    desc:'虚ろな目をした村人。手に儀式用の短刀を握っている。',
+    skills:['たたかう'],
+  },
+  mutant:{
+    name:'変質した漁師',em:'🐟',
+    hp:48,atk:14,def:6,agi:10,
+    san:12,exp:22,gold:10,
+    area:'beach',
+    desc:'皮膚が鱗に覆われ、もはや人の面影は薄い。\n腕が四本に増えている。',
+    skills:['たたかう','精神攻撃'],
+  },
+  cultist2:{
+    name:'深海の歩哨',em:'🌊',
+    hp:60,atk:16,def:8,agi:12,
+    san:10,exp:28,gold:14,
+    area:'beach',
+    desc:'海から上がってきた深きものの下僕。\n黒ずんだ槍を構えている。',
+    skills:['たたかう','叫び声'],
+  },
+  shadow:{
+    name:'執念の影',em:'👤',
+    hp:45,atk:19,def:5,agi:15,
+    san:15,exp:34,gold:12,
+    area:'church',
+    desc:'教会に宿る怨念の集積体。\n実体があるのかどうかさえわからない。',
+    skills:['たたかう','精神攻撃','恐怖の眼'],
+  },
+  shoggoth:{
+    name:'ショゴスの欠片',em:'🫧',
+    hp:75,atk:22,def:10,agi:9,
+    san:20,exp:44,gold:18,
+    area:'underground',
+    desc:'無定形の生命体の一部。\n触れるものすべてを取り込もうとする。',
+    skills:['たたかう','猛毒','精神攻撃'],
+  },
+};
+
+const BOSS = {
+  name:'深海司祭 ナーガル',em:'🐙',
+  hp:220,atk:32,def:14,agi:13,
+  san:30,exp:0,gold:0,
+  desc:'ダゴンに仕える半魚人の司祭。\n四本の腕で古代の武器を振るう。',
+  skills:['海淵の拳','暗黒の祈り','深海の癒し','猛毒'],
+  phase2:false,
+};
+
+// ─── SPELLS ───────────────────────────────────────────
+const SPELLS = [
+  {id:'fire',  name:'禁断の炎',  mp:8,  desc:'60〜80の炎ダメージ',lv:1},
+  {id:'dark',  name:'宇宙の法則',mp:14, desc:'90〜120の闇ダメージ（SAN-15）',lv:3},
+  {id:'confuse',name:'幻惑の暗示',mp:10,desc:'敵の攻撃力を下げる（3ターン）',lv:1},
+  {id:'shield',name:'精神防壁',  mp:12, desc:'防御力UP & SAN消費を減らす',lv:2},
+  {id:'heal',  name:'回復の詩',  mp:15, desc:'HPを60〜80回復',lv:3},
+  {id:'detect',name:'精神探知',  mp:3,  desc:'敵の情報を詳しく見る',lv:1},
+];
+
+// ─── ITEMS ────────────────────────────────────────────
+const ITEMS = [
+  {id:'potion', name:'薬草水',    desc:'HPを50回復する',  price:40, effect:{hp:50}},
+  {id:'hipotion',name:'強壮水',   desc:'HPを120回復する', price:90, effect:{hp:120}},
+  {id:'salt',   name:'清めの塩',  desc:'SANを40回復する', price:60, effect:{san:40}},
+  {id:'ether',  name:'精神液',    desc:'MPを25回復する',  price:80, effect:{mp:25}},
+];
+
+// ─── LEVEL TABLE ──────────────────────────────────────
+const LV_TABLE=[0,60,150,280,450,680,999999];
+const LV_GROWTH={hp:12,atk:4,def:3};
+
+// ─── AREA ENCOUNTERS ──────────────────────────────────
+const ENCOUNTERS={
+  village:['cultist','cultist'],
+  beach:  ['mutant','cultist2','mutant'],
+  church: ['shadow','cultist2','shadow'],
+  underground:['shoggoth','shadow','shoggoth'],
+};
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let G; // game state
+function newGame(){
+  G={
+    screen:'title',
+    player:{
+      name:'霧島 遼',lv:1,exp:0,gold:60,
+      hp:52,maxHp:52,mp:24,maxMp:24,san:100,maxSan:100,
+      atk:14,def:9,agi:10,
+      spells:['fire','confuse','detect','shield'],
+      items:{potion:2,salt:2,ether:1},
+      statusEffects:[],  // {name,turns,effect}
+      buffAtk:0,buffDef:0,sanShield:false,
+    },
+    flags:{
+      shrine:false,beach:false,church:false,underground:false,
+      shopUnlocked:true,spellsLearned:false,
+    },
+    area:'village',
+    storyIdx:0,
+    storyQueue:[],
+    battle:null,
+    sceneAfterBattle:null,
+    bossDefeated:false,
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILITY
+// ═══════════════════════════════════════════════════════
+const R=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const clamp=(v,mn,mx)=>Math.max(mn,Math.min(mx,v));
+
+function gainExp(n){
+  const p=G.player;p.exp+=n;
+  while(p.lv<6&&p.exp>=LV_TABLE[p.lv]){
+    p.exp-=LV_TABLE[p.lv-1]||0;// adjust
+    p.lv++;
+    const g=LV_GROWTH;
+    p.maxHp+=g.hp;p.hp=Math.min(p.hp+g.hp,p.maxHp);
+    p.maxMp+=4;p.mp=Math.min(p.mp+4,p.maxMp);
+    p.atk+=g.atk;p.def+=g.def;
+    if(p.lv===2){p.spells.push('shield');}
+    if(p.lv===3){p.spells.push('heal');p.spells.push('dark');}
+    return p.lv;
+  }
+  return 0;
+}
+
+function statusTick(){
+  const p=G.player;
+  let msgs=[];
+  p.statusEffects=p.statusEffects.filter(e=>{
+    e.turns--;
+    if(e.name==='毒'){const d=R(6,12);p.hp=clamp(p.hp-d,0,p.maxHp);msgs.push(`毒で ${d} のダメージ！`);}
+    return e.turns>0;
+  });
+  return msgs;
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER ENGINE
+// ═══════════════════════════════════════════════════════
+const app=document.getElementById('app');
+
+function render(){
+  switch(G.screen){
+    case 'title':     renderTitle();    break;
+    case 'story':     renderStory();    break;
+    case 'explore':   renderExplore();  break;
+    case 'battle':    renderBattle();   break;
+    case 'levelup':   renderLevelup();  break;
+    case 'shop':      renderShop();     break;
+    case 'gameover':  renderGameover(); break;
+    case 'ending':    renderEnding();   break;
+  }
+}
+
+// ─── STATUS BAR (shared) ─────────────────────────────
+function statusBarHTML(){
+  const p=G.player;
+  const hpPct=p.hp/p.maxHp*100,mpPct=p.mp/p.maxMp*100,sanPct=p.san/p.maxSan*100;
+  const efx=p.statusEffects.map(e=>`<span style="color:var(--warn);font-size:.65rem">[${e.name}]</span>`).join(' ');
+  return `<div class="status-bar">
+  <div class="sb-item"><span class="sb-label">Lv</span><span class="sb-val lv">${p.lv}</span></div>
+  <div class="sb-item">
+    <span class="sb-label">HP <span style="font-size:.65rem">${p.hp}/${p.maxHp}</span></span>
+    <div class="bar"><div class="bar-fill bar-hp" style="width:${hpPct}%"></div></div>
+  </div>
+  <div class="sb-item">
+    <span class="sb-label">MP <span style="font-size:.65rem">${p.mp}/${p.maxMp}</span></span>
+    <div class="bar"><div class="bar-fill bar-mp" style="width:${mpPct}%"></div></div>
+  </div>
+  <div class="sb-item">
+    <span class="sb-label">SAN <span style="font-size:.65rem">${p.san}/${p.maxSan}</span></span>
+    <div class="bar"><div class="bar-fill bar-san" style="width:${sanPct}%"></div></div>
+  </div>
+  </div>${efx?`<div style="padding:2px 16px;background:rgba(6,9,15,.7);font-size:.68rem">${efx}</div>`:''}`;
+}
+
+// ─── TITLE ───────────────────────────────────────────
+function renderTitle(){
+  app.innerHTML=`<div id="s-title">
+  <div class="title-deco">— 怪 異 録 —</div>
+  <div class="title-main">深淵の怪談<br><span style="font-size:.9rem;letter-spacing:.08em">さいはての漁村</span></div>
+  <div class="title-sub">Cthulhu Mythos RPG</div>
+  <button class="title-start" id="btnStart">は じ め か ら</button>
+</div>`;
+  document.getElementById('btnStart').onclick=()=>{
+    newGame();
+    G.storyQueue=[...SCENES.prologue];
+    G.sceneAfterBattle=null;
+    G.screen='story';render();
+  };
+}
+
+// ─── STORY ────────────────────────────────────────────
+function renderStory(){
+  const sc=G.storyQueue[0];
+  if(!sc){
+    // Story done, transition
+    afterStory();return;
+  }
+  const bgGrad={
+    fog:'linear-gradient(180deg,#0a1828 0%,#06090f 100%)',
+    village:'linear-gradient(180deg,#1a1208 0%,#06090f 100%)',
+    shrine:'linear-gradient(180deg,#120a18 0%,#06090f 100%)',
+    beach:'linear-gradient(180deg,#06101a 0%,#06090f 100%)',
+    church:'linear-gradient(180deg,#100808 0%,#06090f 100%)',
+    underground:'linear-gradient(180deg,#060e18 0%,#06090f 100%)',
+    abyss:'linear-gradient(180deg,#040c18 0%,#020408 100%)',
+  };
+  const bgStyle=bgGrad[sc.bg]||bgGrad.fog;
+  app.innerHTML=`<div id="s-story">
+  <div class="story-bg" style="background:${bgStyle};min-height:180px">
+    <div class="story-portrait">${sc.em}</div>
+  </div>
+  <div class="story-box" id="storyBox">
+    <div class="story-speaker">${sc.sp||'　'}</div>
+    <div class="story-text" id="storyText"></div>
+    <div class="story-next">▼ クリックで次へ</div>
+  </div>
+  ${statusBarHTML()}
+</div>`;
+  // Typewriter
+  typewriter(document.getElementById('storyText'),sc.txt,()=>{});
+  document.getElementById('storyBox').onclick=advanceStory;
+}
+
+let typeTimer=null;
+function typewriter(el,txt,cb){
+  if(typeTimer)clearInterval(typeTimer);
+  el.textContent='';let i=0;
+  typeTimer=setInterval(()=>{
+    if(i<txt.length){el.textContent+=txt[i++];}
+    else{clearInterval(typeTimer);typeTimer=null;cb&&cb();}
+  },28);
+}
+
+function advanceStory(){
+  if(typeTimer){clearInterval(typeTimer);typeTimer=null;
+    document.getElementById('storyText').textContent=G.storyQueue[0].txt;return;}
+  G.storyQueue.shift();
+  if(G.storyQueue.length>0){renderStory();}
+  else{afterStory();}
+}
+
+function afterStory(){
+  if(G.bossDefeated){G.screen='ending';render();return;}
+  G.screen='explore';render();
+}
+
+// ─── EXPLORE ─────────────────────────────────────────
+const AREA_DESC={
+  village:'煤けた家々が立ち並ぶ。どの扉も閉ざされ、住人の気配だけがある。\n夜になると、どこかで水音が聞こえる。',
+  beach:'岩礁が続く霧の浜辺。黒い砂浜に、不思議な模様が残っている。\n波は規則的すぎるほど規則的だ。',
+  church:'廃れた教会の外観。窓には板が打ち付けられ、内部からかすかに光が漏れている。',
+  underground:'教会の地下に広がる、人工とは思えない巨大空間。\n壁の文字が、見ていると頭が痛くなる。',
+};
+const AREA_NAME={village:'淀ノ口 村落',beach:'霧の浜辺',church:'廃教会',underground:'地下通路'};
+
+function renderExplore(){
+  const p=G.player,f=G.flags;
+  const loc=AREA_NAME[G.area];
+  const desc=AREA_DESC[G.area];
+
+  // Build action list
+  const actions=[];
+  // Move options
+  if(G.area==='village'){
+    if(!f.shrine)actions.push({id:'shrine',  label:'旧社を調べる', note:'（物語）'});
+    if(f.shrine) actions.push({id:'beach',   label:'霧の浜辺へ向かう', note:'→ 浜辺'});
+    if(f.shopUnlocked) actions.push({id:'shop',label:'宿の店で買い物をする',note:''});
+  }
+  if(G.area==='beach'){
+    if(!f.beach)actions.push({id:'beach_evt',label:'浜辺を探索する',note:'（物語）'});
+    if(f.beach) actions.push({id:'church',   label:'廃教会へ向かう',note:'→ 廃教会'});
+    actions.push({id:'back_v',label:'村落へ戻る',note:'← 村落'});
+  }
+  if(G.area==='church'){
+    if(!f.church)actions.push({id:'church_evt',label:'教会に入る',note:'（物語）'});
+    if(f.church) actions.push({id:'underground',label:'地下への扉を開ける',note:'→ 地下通路'});
+    actions.push({id:'back_b',label:'浜辺へ戻る',note:'← 浜辺'});
+  }
+  if(G.area==='underground'){
+    if(!f.underground)actions.push({id:'underground_evt',label:'奥へ進む',note:'（物語）'});
+    if(f.underground) actions.push({id:'boss',label:'深淵の間へ踏み込む',note:'⚠ ボス'});
+    actions.push({id:'back_c',label:'教会へ戻る',note:'← 廃教会'});
+  }
+  actions.push({id:'fight',label:'うろつく（戦闘を探す）',note:'⚔ 戦闘'});
+  actions.push({id:'rest', label:'その場で休む',note:'HP/MP少し回復'});
+
+  app.innerHTML=`<div id="s-explore">
+  <div class="explore-header">
+    <span class="explore-loc">📍 ${loc}</span>
+    <span style="font-size:.72rem;color:var(--gold)">💰 ${p.gold}G</span>
+  </div>
+  <div class="explore-body">
+    <div class="explore-desc">${desc}</div>
+    <div class="menu-title">— なにをする？ —</div>
+    <div class="menu-list" id="menuList"></div>
+  </div>
+  ${statusBarHTML()}
+</div>`;
+
+  const ml=document.getElementById('menuList');
+  actions.forEach(a=>{
+    const b=document.createElement('button');
+    b.className='menu-btn';
+    b.innerHTML=`${a.label} <span style="font-size:.68rem;color:var(--txt2);margin-left:4px">${a.note}</span>`;
+    if(a.id==='boss')b.className='menu-btn highlight';
+    b.onclick=()=>handleExplore(a.id);
+    ml.appendChild(b);
+  });
+}
+
+function handleExplore(id){
+  const f=G.flags;
+  switch(id){
+    case 'shrine':
+      f.shrine=true;
+      G.storyQueue=[...SCENES.find_shrine];
+      G.screen='story';render();break;
+    case 'beach':
+      G.area='beach';render();break;
+    case 'shop':
+      G.screen='shop';render();break;
+    case 'beach_evt':
+      f.beach=true;
+      G.storyQueue=[...SCENES.beach_night];
+      G.screen='story';render();break;
+    case 'church':
+      G.area='church';render();break;
+    case 'back_v':
+      G.area='village';render();break;
+    case 'church_evt':
+      f.church=true;f.spellsLearned=true;
+      G.storyQueue=[...SCENES.church_enter];
+      G.screen='story';render();break;
+    case 'underground':
+      G.area='underground';render();break;
+    case 'back_b':
+      G.area='beach';render();break;
+    case 'underground_evt':
+      f.underground=true;
+      G.storyQueue=[...SCENES.underground_enter];
+      G.screen='story';render();break;
+    case 'back_c':
+      G.area='church';render();break;
+    case 'boss':
+      G.storyQueue=[...SCENES.boss_intro];
+      G.sceneAfterBattle='boss_win';
+      G.screen='story';
+      // After story, start boss battle
+      const origAfter=afterStory;
+      G._bossStoryDone=true;
+      render();break;
+    case 'fight':
+      startRandomBattle();break;
+    case 'rest':
+      doRest();break;
+  }
+}
+
+function afterStory(){
+  if(G._bossStoryDone){
+    G._bossStoryDone=false;
+    startBoss();return;
+  }
+  if(G.bossDefeated){G.screen='ending';render();return;}
+  G.screen='explore';render();
+}
+
+function doRest(){
+  const p=G.player;
+  const hpGain=Math.ceil(p.maxHp*0.15);
+  const mpGain=Math.ceil(p.maxMp*0.15);
+  p.hp=clamp(p.hp+hpGain,0,p.maxHp);
+  p.mp=clamp(p.mp+mpGain,0,p.maxMp);
+  // Small shop popup via alert equiv
+  showExploreMsg(`体を休めた。\nHP +${hpGain} / MP +${mpGain}`,()=>render());
+}
+
+let msgTimeout=null;
+function showExploreMsg(msg,cb){
+  const p=G.player;
+  app.innerHTML=`<div id="s-explore">
+  <div class="explore-body" style="justify-content:center;padding-top:60px">
+    <div style="font-size:.9rem;line-height:2;white-space:pre-wrap;text-align:center">${msg}</div>
+    <button class="menu-btn" style="margin-top:24px;align-self:center" id="msgOk">つづける</button>
+  </div>
+  ${statusBarHTML()}
+</div>`;
+  document.getElementById('msgOk').onclick=cb;
+}
+
+// ─── SHOP ─────────────────────────────────────────────
+function renderShop(){
+  const p=G.player;
+  app.innerHTML=`<div id="s-explore">
+  <div class="explore-header">
+    <span class="explore-loc">🏪 宿の売店</span>
+    <span class="gold-display">💰 所持金: ${p.gold}G</span>
+  </div>
+  <div class="shop-body">
+  ${ITEMS.map(it=>`<div class="shop-item">
+    <div><div class="shop-item-name">${it.name}</div><div class="shop-item-desc">${it.desc}</div></div>
+    <button class="shop-buy" data-id="${it.id}" ${p.gold<it.price?'disabled':''}>
+      ${it.price}G
+    </button>
+  </div>`).join('')}
+  <button class="menu-btn" id="shopLeave" style="margin-top:8px">店を出る</button>
+  </div>
+  ${statusBarHTML()}
+</div>`;
+  document.querySelectorAll('.shop-buy').forEach(b=>{
+    b.onclick=()=>{
+      const it=ITEMS.find(x=>x.id===b.dataset.id);
+      if(!it||p.gold<it.price)return;
+      p.gold-=it.price;
+      p.items[it.id]=(p.items[it.id]||0)+1;
+      renderShop();
+    };
+  });
+  document.getElementById('shopLeave').onclick=()=>{G.screen='explore';render();};
+}
+
+// ─── BATTLE ───────────────────────────────────────────
+function startRandomBattle(){
+  const pool=ENCOUNTERS[G.area];
+  const eid=pool[R(0,pool.length-1)];
+  const edef=ENEMIES[eid];
+  startBattleWith(edef);
+}
+
+function startBoss(){
+  const boss={...BOSS,curHp:BOSS.hp,phase2:false};
+  G.battle={enemy:boss,log:'深海司祭ナーガルが現れた！\n\n' + boss.desc + '\n\n（SAN -' + boss.san + '）',
+    phase:'player',sub:'cmd'};
+  const p=G.player;
+  p.san=clamp(p.san-boss.san,0,p.maxSan);
+  if(p.san<=0){G.screen='gameover';render();return;}
+  G.screen='battle';render();
+}
+
+function startBattleWith(edef){
+  const enemy={...edef,curHp:edef.hp};
+  G.battle={
+    enemy,
+    log:`${edef.name}があらわれた！\n${edef.desc}${edef.san>0?'\n\n（SAN -'+edef.san+'）':''}`,
+    phase:'player',sub:'cmd',
+    atkDebuff:0,// enemy atk debuff turns
+    playerDef:false, sanShield:false,
+  };
+  const p=G.player;
+  if(edef.san>0){p.san=clamp(p.san-edef.san,0,p.maxSan);if(p.san<=0){G.screen='gameover';render();return;}}
+  G.screen='battle';render();
+}
+
+function renderBattle(){
+  const bt=G.battle,e=bt.enemy,p=G.player;
+  const hpPct=Math.max(0,e.curHp/e.hp*100);
+  const mainArea=`<div class="battle-top">
+  <div class="enemy-art">${e.em}</div>
+  <div class="enemy-name">${e.name}</div>
+  <div class="enemy-hp-wrap">
+    <div class="enemy-hp-label">HP</div>
+    <div class="enemy-hp-bar"><div class="enemy-hp-fill" style="width:${hpPct}%"></div></div>
+  </div>
+</div>
+<div class="battle-msg">${bt.log}</div>`;
+
+  let cmdArea='';
+  if(bt.phase==='player'){
+    if(bt.sub==='cmd'){
+      cmdArea=`<div class="battle-cmds">
+  <button class="bcmd" id="bc-atk">⚔ たたかう</button>
+  <button class="bcmd" id="bc-magic">✨ まほう</button>
+  <button class="bcmd" id="bc-item">🎒 どうぐ</button>
+  <button class="bcmd" id="bc-run">💨 にげる</button>
+</div>`;
+    }else if(bt.sub==='magic'){
+      const spells=p.spells.map(sid=>SPELLS.find(s=>s.id===sid)).filter(Boolean);
+      cmdArea=`<div class="spell-list">
+${spells.map(s=>`<button class="spell-btn" data-sid="${s.id}" ${p.mp<s.mp?'disabled':''}>
+  <span>${s.name} <span style="font-size:.7rem;color:var(--txt2)">— ${s.desc}</span></span>
+  <span class="spell-cost">MP${s.mp}</span>
+</button>`).join('')}
+<button class="back-btn" id="bc-back">← もどる</button>
+</div>`;
+    }else if(bt.sub==='item'){
+      const hasItems=Object.entries(p.items).filter(([k,v])=>v>0);
+      cmdArea=`<div class="item-list">
+${hasItems.length===0?'<div style="color:var(--txt2);font-size:.8rem;padding:8px">アイテムがない</div>':
+  hasItems.map(([k,v])=>{const it=ITEMS.find(x=>x.id===k);return it?`<button class="item-btn" data-iid="${k}">
+  <span>${it.name} — ${it.desc}</span><span class="item-count">×${v}</span>
+</button>`:''}).join('')}
+<button class="back-btn" id="bc-back">← もどる</button>
+</div>`;
+    }
+  }else if(bt.phase==='wait'){
+    cmdArea=`<div class="battle-cmds"><button class="bcmd" id="bc-next" style="grid-column:1/-1">つづける</button></div>`;
+  }
+
+  app.innerHTML=`<div id="s-battle">
+  ${mainArea}
+  ${cmdArea}
+  ${statusBarHTML()}
+</div>`;
+
+  // Bind
+  const q=id=>document.getElementById(id);
+  if(bt.phase==='player'&&bt.sub==='cmd'){
+    q('bc-atk')?.addEventListener('click',()=>playerAttack());
+    q('bc-magic')?.addEventListener('click',()=>{bt.sub='magic';render();});
+    q('bc-item')?.addEventListener('click',()=>{bt.sub='item';render();});
+    q('bc-run')?.addEventListener('click',()=>playerRun());
+  }
+  if(bt.sub==='magic'){
+    document.querySelectorAll('.spell-btn').forEach(b=>{
+      b.addEventListener('click',()=>playerSpell(b.dataset.sid));
+    });
+    q('bc-back')?.addEventListener('click',()=>{bt.sub='cmd';render();});
+  }
+  if(bt.sub==='item'){
+    document.querySelectorAll('.item-btn').forEach(b=>{
+      b.addEventListener('click',()=>playerItem(b.dataset.iid));
+    });
+    q('bc-back')?.addEventListener('click',()=>{bt.sub='cmd';render();});
+  }
+  if(bt.phase==='wait'){
+    q('bc-next')?.addEventListener('click',()=>afterPlayerAction());
+  }
+}
+
+// ─── BATTLE LOGIC ─────────────────────────────────────
+function playerAttack(){
+  const p=G.player,bt=G.battle,e=bt.enemy;
+  const dmg=clamp(R(p.atk-3,p.atk+5)-e.def+R(0,4),1,999);
+  e.curHp=clamp(e.curHp-dmg,0,e.hp);
+  bt.log=`${p.name}の攻撃！\n${e.name}に ${dmg} のダメージ！`;
+  bt.phase='wait';bt.sub='';render();
+}
+
+function playerSpell(sid){
+  const p=G.player,bt=G.battle,e=bt.enemy;
+  const sp=SPELLS.find(s=>s.id===sid);if(!sp||p.mp<sp.mp)return;
+  p.mp-=sp.mp;
+  let msg=`${p.name}は「${sp.name}」を唱えた！\n`;
+  if(sid==='fire'){
+    const dmg=R(60,80);e.curHp=clamp(e.curHp-dmg,0,e.hp);
+    msg+=`${e.name}に ${dmg} の炎ダメージ！`;
+  }else if(sid==='dark'){
+    const dmg=R(90,120);e.curHp=clamp(e.curHp-dmg,0,e.hp);
+    const sLoss=15;p.san=clamp(p.san-sLoss,0,p.maxSan);
+    msg+=`${e.name}に ${dmg} の闇ダメージ！\nしかし精神が削れた（SAN -${sLoss}）`;
+  }else if(sid==='confuse'){
+    bt.atkDebuff=3;
+    msg+=`${e.name}の攻撃力が下がった（3ターン）`;
+  }else if(sid==='shield'){
+    bt.playerDef=true;bt.sanShield=true;
+    msg+=`防御力が上がり、精神も守られた！`;
+  }else if(sid==='heal'){
+    const h=R(60,80);p.hp=clamp(p.hp+h,0,p.maxHp);
+    msg+=`HPが ${h} 回復した！`;
+  }else if(sid==='detect'){
+    msg+=`${e.name}\nHP: ${e.curHp}/${e.hp}\n攻撃: ${e.atk}  防御: ${e.def}\n${e.desc}`;
+  }
+  bt.log=msg;bt.phase='wait';bt.sub='';render();
+}
+
+function playerItem(iid){
+  const p=G.player,bt=G.battle;
+  const it=ITEMS.find(x=>x.id===iid);if(!it||!p.items[iid])return;
+  p.items[iid]--;
+  let msg=`${it.name}を使った！\n`;
+  if(it.effect.hp){p.hp=clamp(p.hp+it.effect.hp,0,p.maxHp);msg+=`HPが ${it.effect.hp} 回復！`;}
+  if(it.effect.san){p.san=clamp(p.san+it.effect.san,0,p.maxSan);msg+=`SANが ${it.effect.san} 回復！`;}
+  if(it.effect.mp){p.mp=clamp(p.mp+it.effect.mp,0,p.maxMp);msg+=`MPが ${it.effect.mp} 回復！`;}
+  bt.log=msg;bt.phase='wait';bt.sub='';render();
+}
+
+function playerRun(){
+  const p=G.player,bt=G.battle;
+  if(R(1,10)<=6){
+    bt.log='逃げ出した！';
+    setTimeout(()=>{G.screen='explore';G.battle=null;render();},800);
+  }else{
+    bt.log='逃げられなかった！';bt.phase='wait';bt.sub='';render();
+  }
+}
+
+function afterPlayerAction(){
+  const bt=G.battle,e=bt.enemy,p=G.player;
+  // Check enemy death
+  if(e.curHp<=0){
+    battleWin();return;
+  }
+  // Check boss phase2
+  if(e.name.includes('ナーガル')&&!e.phase2&&e.curHp<=e.hp*0.5){
+    e.phase2=true;
+    bt.log='ナーガルが力を解放した！\n姿が変貌し、攻撃が激しくなった——\n\n（SAN -20）';
+    p.san=clamp(p.san-20,0,p.maxSan);
+    if(p.san<=0){G.screen='gameover';render();return;}
+    bt.phase='player';bt.sub='cmd';render();return;
+  }
+  // Tick status
+  const msgs=statusTick();
+  if(p.hp<=0){G.screen='gameover';render();return;}
+  // Enemy action
+  enemyAction(msgs);
+}
+
+function enemyAction(prevMsgs){
+  const bt=G.battle,e=bt.enemy,p=G.player;
+  const skills=e.phase2?[...e.skills,...e.skills]:e.skills;
+  const skill=skills[R(0,skills.length-1)];
+  let msg=(prevMsgs.length?prevMsgs.join('\n')+'\n\n':'');
+
+  if(skill==='たたかう'||skill==='海淵の拳'){
+    let atk=e.atk*(e.phase2&&skill==='海淵の拳'?1.5:1);
+    if(bt.atkDebuff>0){atk*=0.7;bt.atkDebuff--;}
+    const dmg=clamp(Math.floor(R(atk*0.85,atk*1.15))-p.def+(bt.playerDef?-5:0),1,999);
+    p.hp=clamp(p.hp-dmg,0,p.maxHp);
+    msg+=`${e.name}の${skill==='海淵の拳'?'海淵の拳':'攻撃'}！\n${p.name}は ${dmg} のダメージを受けた！`;
+  }else if(skill==='精神攻撃'){
+    const sLoss=bt.sanShield?R(4,8):R(10,18);
+    p.san=clamp(p.san-sLoss,0,p.maxSan);
+    msg+=`${e.name}の精神攻撃！\nSANが ${sLoss} 減った！`;
+  }else if(skill==='叫び声'){
+    const sLoss=bt.sanShield?R(3,6):R(8,14);
+    p.san=clamp(p.san-sLoss,0,p.maxSan);
+    msg+=`${e.name}の恐怖の叫び！\nSANが ${sLoss} 減った！`;
+  }else if(skill==='恐怖の眼'){
+    if(R(1,3)===1){
+      p.statusEffects.push({name:'混乱',turns:2});
+      msg+=`${e.name}の眼光！\n${p.name}は混乱した！（2ターン）`;
+    }else{
+      const dmg=R(5,10);p.hp=clamp(p.hp-dmg,0,p.maxHp);
+      msg+=`${e.name}が睨みつけた！\n${dmg}のダメージ！`;
+    }
+  }else if(skill==='猛毒'){
+    if(!p.statusEffects.find(e=>e.name==='毒')){
+      p.statusEffects.push({name:'毒',turns:4});
+      msg+=`${e.name}の猛毒攻撃！\n${p.name}は毒状態になった！`;
+    }else{
+      const dmg=clamp(R(e.atk*0.6,e.atk*0.9)-p.def,1,999);
+      p.hp=clamp(p.hp-dmg,0,p.maxHp);
+      msg+=`${e.name}の攻撃！\n${dmg}のダメージ！`;
+    }
+  }else if(skill==='暗黒の祈り'){
+    const dmg=R(18,26);const sLoss=bt.sanShield?R(10,16):R(20,30);
+    p.hp=clamp(p.hp-dmg,0,p.maxHp);
+    p.san=clamp(p.san-sLoss,0,p.maxSan);
+    msg+=`ナーガルの暗黒の祈り！\nHP -${dmg} / SAN -${sLoss}！`;
+  }else if(skill==='深海の癒し'){
+    const h=R(20,35);e.curHp=clamp(e.curHp+h,0,e.hp);
+    msg+=`ナーガルは回復の呪文を唱えた！\nHPが ${h} 回復した！`;
+  }
+
+  bt.log=msg;bt.playerDef=false;bt.sanShield=false;
+
+  if(p.hp<=0||p.san<=0){
+    G.screen='gameover';render();return;
+  }
+  bt.phase='player';bt.sub='cmd';render();
+}
+
+function battleWin(){
+  const bt=G.battle,e=bt.enemy,p=G.player;
+  const isBoss=e.name.includes('ナーガル');
+  if(isBoss){
+    G.bossDefeated=true;
+    G.storyQueue=[...SCENES.boss_win];
+    G.battle=null;
+    G.screen='story';render();return;
+  }
+  p.gold+=(e.gold||0);
+  const lvBefore=p.lv;
+  const lv=gainExp(e.exp||0);
+  let msg=`${e.name}を倒した！\n経験値 +${e.exp}  Gold +${e.gold}`;
+  if(lv>0){
+    G.battle=null;
+    G.screen='levelup';
+    G._lvupMsg=`Lv ${lvBefore} → ${p.lv} にレベルアップ！\nHP +${LV_GROWTH.hp}  ATK +${LV_GROWTH.atk}  DEF +${LV_GROWTH.def}${lv===2?'\n「精神防壁」を覚えた！':lv===3?'\n「回復の詩」「宇宙の法則」を覚えた！':''}`;
+    render();
+  }else{
+    G.battle=null;
+    showExploreMsg(msg+`\n\nHP: ${p.hp}/${p.maxHp}`,()=>{G.screen='explore';render();});
+  }
+}
+
+// ─── LEVELUP ──────────────────────────────────────────
+function renderLevelup(){
+  const p=G.player;
+  app.innerHTML=`<div class="overlay-screen">
+  <div class="overlay-title" style="color:var(--gold)">★ レベルアップ ★</div>
+  <div class="overlay-body">${G._lvupMsg||''}</div>
+  <button class="overlay-btn" id="luOk">つづける</button>
+</div>`;
+  document.getElementById('luOk').onclick=()=>{G.screen='explore';render();};
+}
+
+// ─── GAMEOVER / ENDING ────────────────────────────────
+function renderGameover(){
+  app.innerHTML=`<div class="overlay-screen">
+  <div class="overlay-title" style="color:var(--red)">理性の崩壊</div>
+  <div class="overlay-body">深淵の闇に、意識が溶けていった。\n\n——終わり、あるいは始まり。\n\nあなたは、もはや人間でなくなった。</div>
+  <button class="overlay-btn" id="goBtn">タイトルへ戻る</button>
+</div>`;
+  document.getElementById('goBtn').onclick=()=>{G.screen='title';render();};
+}
+
+function renderEnding(){
+  app.innerHTML=`<div class="overlay-screen">
+  <div style="font-size:1.1rem;color:var(--acc2);letter-spacing:.15em">— 第一章 終 —</div>
+  <div class="overlay-title">深淵の怪談</div>
+  <div class="overlay-body">叔父を連れ、列車に乗った。\n霧は晴れないが、朝の光は確かにある。\n\n深海の神は眠りに就いた。\nしかし「眠れる偉大な者」は、いつか目覚める——\n\nあなたの冒険は、まだ続く。</div>
+  <button class="overlay-btn" id="endBtn">タイトルへ戻る</button>
+</div>`;
+  document.getElementById('endBtn').onclick=()=>{G.screen='title';render();};
+}
+
+// ─── START ────────────────────────────────────────────
+newGame();G.screen='title';render();
+</script>
+</body>
+</html>
