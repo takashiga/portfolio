@@ -89,6 +89,16 @@ const APPS = [
     accent: "#f59e0b"
   },
   {
+    id: "ginga",
+    title: "銀河鉄道の夜",
+    description: "宮沢賢治の名作を現代語でノベルゲーム化。ジョバンニとカムパネルラの銀河の旅を体験する、約45分の物語。",
+    tags: ["ゲーム", "ノベル", "文学"],
+    thumbnail: "🚂",
+    path: "apps/ginga/index.html",
+    category: "game",
+    accent: "#7a9ec8"
+  },
+  {
     id: "rpg",
     title: "深淵の怪談",
     description: "クトゥルフ神話TRPGをベースにしたドラクエ風RPG。理性（SAN）を削られながら、深海神官に挑め。",

@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>銀河鉄道の夜</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&display=swap');
+:root{
+  --bg:#04060e;--txt:#d8d0bc;--txt2:#a09880;
+  --acc:#7a9ec8;--acc2:#a8c4e8;
+  --box:#07090f;--bdr:#1a2030;
+  --gold:#c8a84a;--red:#c86060;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);color:var(--txt);
+  font-family:'Noto Serif JP',serif;
+  height:100vh;overflow:hidden;
+  display:flex;flex-direction:column;
+  user-select:none;
+}
+
+/* ── SCENE LAYER ── */
+#scene{
+  flex:1;position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+#bg{position:absolute;inset:0;transition:opacity .8s;}
+#bg-prev{position:absolute;inset:0;opacity:0;pointer-events:none;}
+#stars{position:absolute;inset:0;pointer-events:none;}
+#scene-art{
+  position:relative;z-index:2;font-size:5rem;
+  text-shadow:0 0 40px rgba(168,196,232,.4);
+  transition:opacity .5s,transform .5s;
+  pointer-events:none;
+}
+#chapter-card{
+  position:absolute;inset:0;z-index:10;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(4,6,14,.92);opacity:0;pointer-events:none;
+  transition:opacity .6s;gap:12px;
+}
+#chapter-card.show{opacity:1;pointer-events:auto;}
+#chapter-no{font-size:.75rem;letter-spacing:.4em;color:var(--acc);text-transform:uppercase;}
+#chapter-name{font-size:1.6rem;font-weight:300;letter-spacing:.2em;color:var(--txt);}
+
+/* ── TEXT BOX ── */
+#textbox{
+  background:rgba(4,6,14,.88);
+  border-top:1px solid var(--bdr);
+  padding:0;flex-shrink:0;
+  position:relative;
+}
+#speaker-bar{
+  padding:8px 20px 0;min-height:26px;
+  font-size:.72rem;letter-spacing:.2em;color:var(--acc2);font-weight:700;
+}
+#text-area{
+  padding:12px 20px 8px;min-height:90px;
+  font-size:.9rem;line-height:2.0;color:var(--txt);
+  white-space:pre-wrap;
+}
+#next-indicator{
+  text-align:right;padding:4px 20px 10px;
+  font-size:.65rem;color:var(--txt2);opacity:.5;
+  animation:blink 1.2s infinite;
+}
+@keyframes blink{0%,100%{opacity:.1}60%{opacity:.7}}
+
+/* ── CHOICES ── */
+#choices{
+  display:none;padding:10px 20px 16px;
+  display:flex;flex-direction:column;gap:7px;
+}
+#choices.show{display:flex;}
+.choice-btn{
+  background:none;border:1px solid var(--bdr);border-radius:3px;
+  color:var(--txt);font-size:.83rem;font-family:inherit;
+  padding:9px 16px;cursor:pointer;text-align:left;
+  transition:all .15s;letter-spacing:.04em;line-height:1.6;
+}
+.choice-btn:hover{border-color:var(--acc);color:var(--acc2);background:rgba(122,158,200,.05);}
+
+/* ── TOP BAR ── */
+#topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 16px;border-bottom:1px solid var(--bdr);
+  background:rgba(4,6,14,.7);font-size:.7rem;color:var(--txt2);
+  position:relative;z-index:5;
+}
+.tb-title{letter-spacing:.2em;color:var(--acc);}
+.tb-btn{
+  background:none;border:1px solid var(--bdr);border-radius:3px;
+  color:var(--txt2);font-size:.65rem;padding:3px 10px;cursor:pointer;
+  font-family:inherit;transition:all .1s;
+}
+.tb-btn:hover{border-color:var(--acc);color:var(--acc);}
+.progress-bar{
+  position:absolute;bottom:0;left:0;height:1px;
+  background:var(--acc);transition:width .4s;
+}
+
+/* ── BACKGROUNDS ── */
+.bg-classroom{background:linear-gradient(to bottom,#0e1018,#0a0c18);}
+.bg-printshop{background:linear-gradient(160deg,#120800,#1a0e04);}
+.bg-home{background:linear-gradient(to bottom,#100c08,#0c0804);}
+.bg-festival{background:linear-gradient(to bottom,#08060e,#100818);}
+.bg-hill{background:radial-gradient(ellipse at 50% 90%,#080620 0%,#020008 100%);}
+.bg-station{background:radial-gradient(ellipse at 50% 40%,#101840 0%,#020010 100%);}
+.bg-train{background:linear-gradient(to bottom,#060820,#020010);}
+.bg-coast{background:linear-gradient(to bottom,#140800,#080400);}
+.bg-farewell{background:linear-gradient(to bottom,#040510,#020008);}
+.bg-river{background:linear-gradient(to bottom,#040c14,#020610);}
+.bg-dawn{background:linear-gradient(175deg,#141020,#0c1824);}
+
+/* ── TITLE SCREEN ── */
+#s-title{
+  position:fixed;inset:0;z-index:100;
+  background:radial-gradient(ellipse at 50% 60%,#0a0c24 0%,#020008 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:20px;cursor:pointer;
+}
+.title-em{font-size:3.5rem;opacity:.8;text-shadow:0 0 30px rgba(168,196,232,.5);}
+.title-main{font-size:2rem;font-weight:300;letter-spacing:.25em;color:var(--txt);}
+.title-author{font-size:.72rem;letter-spacing:.25em;color:var(--txt2);}
+.title-sub{font-size:.68rem;letter-spacing:.15em;color:var(--acc);margin-top:4px;}
+.title-start{
+  margin-top:16px;padding:12px 44px;
+  background:none;border:1px solid var(--bdr);border-radius:2px;
+  color:var(--txt);font-size:.88rem;font-family:inherit;cursor:pointer;
+  letter-spacing:.25em;transition:all .2s;
+}
+.title-start:hover{border-color:var(--acc2);color:var(--acc2);box-shadow:0 0 20px rgba(122,158,200,.2);}
+.title-note{font-size:.6rem;color:var(--txt2);opacity:.4;letter-spacing:.1em;}
+
+/* ── ENDING ── */
+#s-ending{
+  position:fixed;inset:0;z-index:100;
+  background:radial-gradient(ellipse at 50% 60%,#0a0c24 0%,#020008 100%);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:20px;text-align:center;padding:24px;
+}
+.end-em{font-size:2.5rem;}
+.end-title{font-size:1.3rem;font-weight:300;letter-spacing:.2em;color:var(--acc2);}
+.end-text{font-size:.82rem;line-height:2.2;color:var(--txt2);max-width:400px;white-space:pre-wrap;}
+.end-btn{
+  padding:10px 36px;background:none;border:1px solid var(--bdr);
+  color:var(--txt);font-size:.85rem;font-family:inherit;cursor:pointer;
+  letter-spacing:.2em;border-radius:2px;transition:all .2s;
+}
+.end-btn:hover{border-color:var(--acc2);color:var(--acc2);}
+</style>
+</head>
+<body>
+
+<!-- Title Screen -->
+<div id="s-title">
+  <div id="title-stars"></div>
+  <div class="title-em">🚂</div>
+  <div class="title-main">銀河鉄道の夜</div>
+  <div class="title-author">原作：宮沢賢治　　現代語版ノベルゲーム</div>
+  <div class="title-sub">Night on the Galactic Railroad</div>
+  <button class="title-start" id="btnTitle">は　じ　め　る</button>
+  <div class="title-note">クリックまたはタップで物語を進める</div>
+</div>
+
+<!-- Main Game -->
+<div id="topbar">
+  <span class="tb-title">銀河鉄道の夜</span>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span id="tb-chapter" style="font-size:.65rem;color:var(--txt2)"></span>
+    <button class="tb-btn" id="btnSkip">スキップ</button>
+    <button class="tb-btn" id="btnAuto">オート</button>
+  </div>
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+
+<div id="scene">
+  <div id="bg-prev"></div>
+  <div id="bg"></div>
+  <div id="stars"></div>
+  <div id="scene-art">🚂</div>
+  <div id="chapter-card">
+    <div id="chapter-no"></div>
+    <div id="chapter-name"></div>
+  </div>
+</div>
+
+<div id="textbox">
+  <div id="speaker-bar"></div>
+  <div id="text-area"></div>
+  <div id="choices" style="display:none"></div>
+  <div id="next-indicator">▼</div>
+</div>
+
+<!-- Ending Screen -->
+<div id="s-ending">
+  <div class="end-em">✦</div>
+  <div class="end-title">— 了 —</div>
+  <div class="end-text" id="endText"></div>
+  <button class="end-btn" onclick="location.reload()">タイトルへ戻る</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STORY DATA
+// ═══════════════════════════════════════════
+// bg: 背景クラス
+// sp: 話者（null=地の文）
+// em: 絵文字アイコン
+// text: 本文
+// ch: チャプタータイトル（表示後に続く）
+// choices: 選択肢 [{label, goto}]
+// sfx: 音エフェクト（optional）
+
+const STORY = [
+// ─────────────── 0: プロローグ ───────────────
+{bg:'bg-hill',em:'🌌',sp:null,ch:'プロローグ',
+text:`夜、星が落ちる夜の話をしよう。
+
+それがいつのことだったのか、夢の中のことだったのか、
+少年のジョバンニにはずっとわからなかった。
+
+ただ——あの夜のことだけは、生涯、忘れなかった。`},
+
+{bg:'bg-hill',em:'🌌',sp:null,
+text:`川のような白い帯が、夜空をゆっくり流れていた。
+天の川だ。
+ジョバンニは草の上に寝転がって、それを見ていた。
+
+そして、気がついたら——列車の中にいた。`},
+
+// ─────────────── 1: 午後の教室 ───────────────
+{bg:'bg-classroom',em:'🏫',sp:null,ch:'第一章　午後の教室',
+text:`「みなさん、天の川はなぜ川と呼ぶのか、わかりますか?」
+
+夏の終わりの午後。
+先生の声が教室に低く響いた。
+窓から入る光が斜めになって、黒板の文字を白く照らしていた。`},
+
+{bg:'bg-classroom',em:'🏫',sp:null,
+text:`ジョバンニは手を半分だけ上げた——そして下げた。
+
+知っている。ちゃんと知っている。
+でも最近、クラスメートの前で話すのが怖かった。
+父親が漁に出たまま帰らないことを、みんなが知っているから。`},
+
+{bg:'bg-classroom',em:'🏫',sp:'ザネリ',
+text:`「先生っ! 川みたいに流れて見えるから、天の川なんですよ!」
+
+クラスで一番声の大きいザネリが、元気よく手を上げた。
+先生は小さく笑って、「そういう見方もありますね」と言った。`},
+
+{bg:'bg-classroom',em:'🏫',sp:'先生',
+text:`「ジョバンニくん、あなたはどう思いますか」
+
+名指しされた。
+ジョバンニの心臓が一瞬だけ跳ねた。`},
+
+// CHOICE 1
+{bg:'bg-classroom',em:'🏫',sp:null,
+text:`どうする——`,
+choices:[
+  {label:'「……牛乳の川、です。外国ではそう呼ぶそうで」と答える',goto:7},
+  {label:'黙って、うつむいた',goto:8},
+]},
+
+{bg:'bg-classroom',em:'🏫',sp:'ジョバンニ',
+text:`「……牛乳の川、です」
+震える声で、そう答えた。
+「外国では、ミルキーウェイと言うそうで。本当の意味は……ぼくはまだ、わかりません」
+
+先生は少し驚いた顔をして、「よく知っていますね」と言った。
+ザネリが小さく「へえ」と言う声が聞こえた。`,goto:9},
+
+{bg:'bg-classroom',em:'🏫',sp:null,
+text:`ジョバンニは何も答えられなかった。
+うつむいて、机の木目を見つめた。
+
+ザネリたちのくすくすという笑い声が、遠くから聞こえてきた気がした。`,goto:9},
+
+{bg:'bg-classroom',em:'🏫',sp:null,
+text:`授業が終わって教室が騒がしくなった後、
+カムパネルラがジョバンニの席の近くに来て——でも、何か言おうとして、やめた。
+
+「……行こう、ジョバンニ」
+その声は、いつもより少し低かった。
+ジョバンニは先に立って歩き出してしまった。
+
+——あとで、何度もそのことを後悔した。`},
+
+// ─────────────── 2: 活版所と家 ───────────────
+{bg:'bg-printshop',em:'⚙️',sp:null,ch:'第二章　活版所と夜の帰り道',
+text:`放課後、ジョバンニは活版所へ向かった。
+
+鉛の活字を一つひとつ拾い上げ、台に並べる。
+単純な作業が、今日は妙に心地よかった。
+機械の音が、頭の中のごちゃごちゃを整理してくれるようだった。`},
+
+{bg:'bg-printshop',em:'⚙️',sp:'同僚のおじさん',
+text:`「ジョバンニくん、今日も遅くまでご苦労さん」
+活版所の人が声をかけてくれた。
+「お母さんの具合、どうだい」
+「……少しよくなってます」とジョバンニは答えた。
+
+本当のことを言えなかった。`},
+
+{bg:'bg-home',em:'🕯️',sp:null,
+text:`帰り道、ジョバンニは牛乳屋に寄った。
+少しだけ分けてもらえた牛乳と、固くなりかけたパンを持って、家に帰る。
+
+玄関を開けると、薬の匂いがした。
+母親はいつものように、布団の中にいた。`},
+
+{bg:'bg-home',em:'🕯️',sp:'お母さん',
+text:`「遅かったわね。おなか、すいてない?」
+微熱でほんのり赤みのある顔で、お母さんは微笑んだ。
+その笑顔が、ジョバンニには一番、胸に刺さった。
+
+病気なのに、心配させないように笑っている。`},
+
+{bg:'bg-home',em:'🕯️',sp:'ジョバンニ',
+text:`「牛乳、もらってきたよ」
+「ありがとう。お父さんのこと、心配しなくていいからね」
+
+お父さんのことを「心配しなくていい」と言うのが、
+最近のお母さんの口癖になっていた。
+
+——漁に出て、三年が経つ。`},
+
+{bg:'bg-home',em:'🕯️',sp:null,
+text:`窓から星が見えた。
+夏の星座が、静かに輝いていた。
+
+〈お父さんは、今どこにいるんだろう〉
+ジョバンニは夕ご飯を一人で食べながら、そんなことを考えた。`},
+
+// ─────────────── 3: ケンタウル祭 ───────────────
+{bg:'bg-festival',em:'🏮',sp:null,ch:'第三章　ケンタウル祭の夜',
+text:`その夜は、毎年恒例の「ケンタウル祭」だった。
+川沿いに灯籠が並んで、青白い光が水面に揺れている。
+笑い声と、遠くから流れてくる笛の音。
+
+ジョバンニは「行ってくるね」とお母さんに一声かけて、外に出た。`},
+
+{bg:'bg-festival',em:'🏮',sp:null,
+text:`でも、友達と一緒じゃなかった。
+
+花火が上がって、歓声が湧いた。
+その声の中に、カムパネルラの笑い声が混じっているような気がした。
+振り返ると——カムパネルラが仲間たちと楽しそうにしているのが見えた。`},
+
+{bg:'bg-festival',em:'🏮',sp:null,
+text:`カムパネルラはジョバンニに気がついて、こちらを見た。
+
+目が合った。
+カムパネルラが何か言おうとした——でもジョバンニは、目をそらした。
+
+なぜそうしたのか、うまく説明できなかった。
+ただ、笑い返せなかった。`},
+
+{bg:'bg-festival',em:'🏮',sp:'ザネリ',
+text:`「ジョバンニ! お父さん、まだ帰らないんだって?」
+
+橋のそばで、ザネリが声をかけてきた。
+いじわるな言い方じゃなかった——でも、それが余計に痛かった。
+ジョバンニは何も言わずに歩き続けた。`},
+
+{bg:'bg-hill',em:'⛰️',sp:null,
+text:`祭りの光から離れて、丘へ向かう道を歩いた。
+夜露が靴を濡らした。草の匂いがした。
+
+丘の頂上には、風車のような形をした柱が立っていた。
+「天気輪の柱」と呼ばれているやつだ。
+ジョバンニはその柱の下に座って、空を見上げた。`},
+
+{bg:'bg-hill',em:'✨',sp:null,
+text:`天の川が、白くにじんで広がっていた。
+
+〈こんなに広い宇宙に、ぼくはたった一人だ〉
+
+そう思ったとき——なぜか、泣きたくもなかったし、怖くもなかった。
+ただ、静かだった。
+
+草が揺れた。空気が揺れた。
+そして——`},
+
+// ─────────────── 4: 銀河ステーション ───────────────
+{bg:'bg-station',em:'🌌',sp:null,ch:'第四章　銀河ステーション',
+text:`突然、あたりが眩しくなった。
+
+「銀河ステーション! 銀河ステーション!」
+
+遠くから、そんな声が響いてきた。
+と思ったら——ジョバンニは列車の中にいた。`},
+
+{bg:'bg-train',em:'🚂',sp:null,
+text:`窓の外には、宇宙が広がっていた。
+
+夜よりも黒く、星よりも白く輝く、銀河そのものが流れている。
+列車は音もなく、その光の川の中を走っていた。
+
+シートは古びていたが、窓ガラスはとても透明だった。
+宇宙の光が、まっすぐ車内に差し込んでくる。`},
+
+{bg:'bg-train',em:'🚂',sp:'カムパネルラ',
+text:`「ジョバンニ」
+
+——隣に、カムパネルラがいた。`},
+
+{bg:'bg-train',em:'🚂',sp:'ジョバンニ',
+text:`「カムパネルラ……! きみも、乗ってたの?」
+「うん」
+
+カムパネルラは静かに笑った。
+その笑顔が——いつもより、少し違う気がした。
+何かを、ずっと前から知っているような顔だった。`},
+
+{bg:'bg-train',em:'🚂',sp:'ジョバンニ',
+text:`「どこへ行くんだろう」
+「南十字星のあたりまで、って書いてあった」
+
+カムパネルラが窓の外を見つめたまま、静かに答えた。
+
+〈いつもより落ち着いてる〉
+ジョバンニは友人の横顔を見ながら思った。`},
+
+{bg:'bg-train',em:'🎟️',sp:null,
+text:`ふと、ポケットに何かが入っているのに気がついた。
+引っ張り出すと——切符だった。
+
+でも、普通の切符じゃない。
+緑色の光をわずかに帯びた、不思議な紙。
+そこに書かれた文字は、読もうとするたびに意味が変わるようだった。`},
+
+{bg:'bg-train',em:'🎟️',sp:'カムパネルラ',
+text:`カムパネルラが覗き込んで、目を細めた。
+
+「すごい切符だ」
+「……どういう意味?」
+「どこへでも行ける、ということじゃないかな。
+　天国よりも遠いところへも——」
+
+カムパネルラはそう言ってから、また窓の外を見た。`},
+
+// CHOICE 2
+{bg:'bg-train',em:'🎟️',sp:null,
+text:`この切符って、いったいなんだろう——`,
+choices:[
+  {label:'〈夢の中の切符かな〉と思った',goto:29},
+  {label:'〈本物だ。本当に、どこへでも行ける〉と思った',goto:30},
+  {label:'〈カムパネルラがいれば、どこだってよかった〉',goto:31},
+]},
+{bg:'bg-train',em:'🎟️',sp:null,
+text:`〈夢だとしても——この銀河は、本物に見える〉
+窓の外の星が、手を伸ばせば届きそうなほど近かった。`,goto:32},
+{bg:'bg-train',em:'🎟️',sp:null,
+text:`〈本物の切符だ〉とジョバンニは確信した。
+どこまでも、果てまでも行ける。
+この切符があれば——`,goto:32},
+{bg:'bg-train',em:'🎟️',sp:null,
+text:`どこへ行くかより、誰と行くか。
+カムパネルラが隣にいる。それで十分だった。`,goto:32},
+
+// ─────────────── 5: 宙の旅 ───────────────
+{bg:'bg-coast',em:'🌿',sp:null,ch:'第五章　銀河の旅',
+text:`列車はプリオシン海岸に止まった。
+
+窓の外に、太古の地層が広がっていた。
+化石が、星のように白く輝いている。
+何万年も前の海が、今もここに光を宿している——そんな場所だった。`},
+
+{bg:'bg-coast',em:'🌿',sp:'ジョバンニ',
+text:`「あの白い光、なに?」
+「化石だよ。石になった生き物の骨」
+
+カムパネルラが教えてくれた。
+ジョバンニは窓に顔を近づけた。
+
+〈これが、何万年前に生きていた命か〉
+そう思ったら、その光が急にやさしく見えた。`},
+
+{bg:'bg-train',em:'🕊️',sp:null,
+text:`次の停車駅で、一人の男が乗ってきた。
+
+大きなカゴを持って、白い鷺の羽根を帽子に刺した男だった。
+「鳥捕り」と名乗った彼は、陽気に笑いながらカゴを開けてみせた。
+
+中には、白く輝く鳥がいた。`},
+
+{bg:'bg-train',em:'🕊️',sp:'鳥捕り',
+text:`「銀河の鳥を捕ってるんですよ。なにしろここじゃ、白鳥だの鶴だの、
+その辺に降りてますから」
+
+男は一羽の鳥を手に乗せた。
+鳥はしばらくその温もりを感じてから、
+すうっと透き通って——消えた。`},
+
+{bg:'bg-train',em:'🕊️',sp:'ジョバンニ',
+text:`「どこへ消えたの?」
+「星になるんですよ。この銀河のどこかで輝いてる」
+
+男は遠い目をして笑った。
+
+「あの子たちが、空に帰れるように——
+　この銀河じゃあ、すべてが光になれるんです」`},
+
+// CHOICE 3
+{bg:'bg-train',em:'🕊️',sp:null,
+text:`鳥捕りの男が立ち去る前に——`,
+choices:[
+  {label:'「ぼくにも一羽、もらえますか」と頼む',goto:38},
+  {label:'黙って見送った',goto:39},
+]},
+{bg:'bg-train',em:'🕊️',sp:'鳥捕り',
+text:`「いいですよ」
+男は一羽の鳥をジョバンニの手に乗せてくれた。
+鳥はしばらく手の温もりを感じて——やがて光になって飛んでいった。
+手のひらに、白い羽根が一枚残った。`,goto:40},
+{bg:'bg-train',em:'🕊️',sp:null,
+text:`男は手を振って、次の車両へ歩いていった。
+白い羽根が一枚、座席の上に落ちた。
+ジョバンニはそっとそれを拾って、ポケットにしまった。`,goto:40},
+
+{bg:'bg-train',em:'🦂',sp:'カムパネルラ',
+text:`スコルピウス座が近づくと、カムパネルラが静かに話し始めた。
+
+「さそり座の話、知ってる?
+　さそりは一生かけて虫を食べて生きていたけど、
+　最後に死ぬとき——〈せめてみんなの幸せのために、この体が役に立ったら〉って、
+　神様に願ったんだ」`},
+
+{bg:'bg-train',em:'🦂',sp:'カムパネルラ',
+text:`「そしたら、そのまま赤い火になって、
+　今も夜空で燃えてる——」
+
+カムパネルラは窓の外を見た。
+さそり座の赤い星が、遠くに輝いていた。`},
+
+{bg:'bg-train',em:'🦂',sp:'ジョバンニ',
+text:`「それって……幸せなの?」
+
+しばらく間があった。
+カムパネルラが答えた。
+
+「わからない。でも——後悔は、してないと思う」`},
+
+{bg:'bg-train',em:'🦂',sp:null,
+text:`ジョバンニはカムパネルラの横顔を見た。
+
+窓から差し込む銀河の光の中で、
+友人の顔はいつもより少し——大人に見えた。
+
+〈カムパネルラ、なんか今日は違う気がする〉
+うまく言葉にできなかった。`},
+
+// ─────────────── 6: タイタニックから ───────────────
+{bg:'bg-train',em:'🚢',sp:null,ch:'第六章　旅の仲間たち',
+text:`北十字のあたりで、列車は速度を落とした。
+
+新しい乗客が乗り込んできた。
+若い青年と、十二、三歳の女の子、そして小さな男の子。
+三人の服は、ひどく濡れていた。`},
+
+{bg:'bg-train',em:'🚢',sp:'青年',
+text:`「助かったんですか?」
+ジョバンニが思わず聞くと、青年は静かに首を振った。
+
+「いいえ。私たちは——この列車に乗るために、
+　別の旅を終えたのです」`},
+
+{bg:'bg-train',em:'🚢',sp:null,
+text:`ジョバンニにはすぐには理解できなかった。
+でも、なんとなく——わかった気がした。
+
+この列車に乗っている人たちのことが。
+その行き先のことが。
+
+隣でカムパネルラが、静かに三人を見ていた。`},
+
+{bg:'bg-train',em:'🚢',sp:'青年',
+text:`「あなたたちは、生きているのですか」
+
+青年が静かに聞いた。
+カムパネルラはじっと青年を見て、何も言わなかった。
+
+ジョバンニは「そうです」と答えた——でも少し、自信がなかった。`},
+
+{bg:'bg-train',em:'🚢',sp:'女の子',
+text:`女の子がジョバンニを見て言った。
+
+「怖くないですよ。
+　どこへ行っても、神様がいると思うから」
+
+その目が、とても穏やかだった。
+生きることも、旅立つことも——同じように迎えている目だった。`},
+
+{bg:'bg-train',em:'🚢',sp:'男の子',
+text:`「お姉ちゃん、天国にもお菓子はある?」
+
+男の子が姉の袖を引っ張った。
+
+「あるわよ。きっとね」
+お姉さんは弟の頭を優しくなでた。
+
+その光景を見ながら、ジョバンニは胸がいっぱいになった。`},
+
+{bg:'bg-train',em:'🚢',sp:null,
+text:`〈こんなふうに、笑い合える人がいるだろうか〉
+ジョバンニは考えた。
+
+——いる。カムパネルラがいる。
+それだけで、十分だと思った。`},
+
+// ─────────────── 7: さよなら ───────────────
+{bg:'bg-farewell',em:'✝️',sp:null,ch:'第七章　南十字星の手前で',
+text:`列車は南十字星に近づいていた。
+
+車窓の向こうに、宝石のような十字の光が見えた。
+あそこが、終点だ。
+
+タイタニックから来た三人が、静かに席を立った。`},
+
+{bg:'bg-farewell',em:'✝️',sp:'青年',
+text:`「ここで失礼します。
+　あなたたちの旅が、よいものでありますように」
+
+彼は微笑んで、女の子の手を引いた。
+車窓の向こうに、白く輝く光が広がっていた。
+
+「天国だよ!」と男の子が叫んだ。`},
+
+{bg:'bg-farewell',em:'✝️',sp:null,
+text:`三人が降りると、列車はまた静かになった。
+
+ジョバンニはカムパネルラを見た。
+いつの間にか、その表情が——遠くを見ていた。
+
+どこか遠い場所を。ここではない場所を。`},
+
+{bg:'bg-farewell',em:'💫',sp:'ジョバンニ',
+text:`「カムパネルラ」
+「……うん」
+
+なぜかわからないけれど——言わなければいけない気がして、
+ジョバンニは言った。
+
+「きみのお母さんのこと、ぼく、好きだよ」`},
+
+{bg:'bg-farewell',em:'💫',sp:'カムパネルラ',
+text:`カムパネルラの目が、わずかに赤くなった。
+
+「……ぼくのお母さん、幸せになれるかな」
+「なれるよ」とジョバンニは言った。「絶対に」
+
+カムパネルラは、少し間を置いてから、笑った。`},
+
+// CHOICE 4
+{bg:'bg-farewell',em:'💫',sp:null,
+text:`ジョバンニはカムパネルラに——`,
+choices:[
+  {label:'「ぼくたち、ずっと一緒にいようね」と言った',goto:59},
+  {label:'「この切符があれば、どこまでも行けるよ」と言った',goto:60},
+  {label:'何も言えなかった。でも、笑い返した',goto:61},
+]},
+{bg:'bg-farewell',em:'💫',sp:'ジョバンニ',
+text:`「ぼくたち、ずっと一緒にいようね」
+カムパネルラは静かに頷いた。
+「うん——ぼくは、どこまでもジョバンニと一緒に行くよ」`,goto:62},
+{bg:'bg-farewell',em:'💫',sp:'カムパネルラ',
+text:`カムパネルラは切符をじっと見てから、こう言った。
+「ぼくは——どこまでもジョバンニと一緒に行くよ」
+その言葉が、どういう意味か——その時はまだわからなかった。`,goto:62},
+{bg:'bg-farewell',em:'💫',sp:'カムパネルラ',
+text:`カムパネルラがジョバンニを見て、静かに笑った。
+「ぼく、どこまでもジョバンニと一緒に行くよ」
+——その笑顔が、ジョバンニの胸に焼き付いた。`,goto:62},
+
+{bg:'bg-farewell',em:'💫',sp:null,
+text:`その言葉の意味を、ジョバンニはまだ理解していなかった。
+ただ、嬉しかった。
+たった一人の親友の言葉が。
+
+窓の外で、銀河が静かに流れていた。`},
+
+{bg:'bg-farewell',em:'💫',sp:null,
+text:`次の瞬間——
+
+カムパネルラが、いなかった。
+
+隣の席が空になっていた。
+消えた、という感覚もなく——ただ、そこにいなかった。`},
+
+{bg:'bg-farewell',em:'💫',sp:'ジョバンニ',
+text:`「カムパネルラ!!」
+
+ジョバンニは立ち上がって叫んだ。
+窓の外を見た。銀河が流れていた。
+どこにも——カムパネルラの姿はなかった。`},
+
+{bg:'bg-farewell',em:'🌌',sp:null,
+text:`列車がゆっくりと透けていった。
+
+座席も、窓も、線路も——すべてが銀河の光に溶けていく。
+
+最後に聞こえたのは、遠くで誰かが泣く声——
+それとも、ジョバンニ自身の声だったのか。`},
+
+// ─────────────── 8: 夜明け ───────────────
+{bg:'bg-hill',em:'🌅',sp:null,ch:'第八章　夜明け',
+text:`気がつくと、ジョバンニは丘の上にいた。
+
+草は夜露で濡れていた。
+空の東が、うっすらと白んでいる。
+
+——夜が明けようとしていた。`},
+
+{bg:'bg-hill',em:'🌅',sp:null,
+text:`頬が濡れていた。
+泣いていたのか。それとも夢を見ていたのか。
+
+手のひらを開くと——
+白い羽根が一枚、残っていた。`},
+
+{bg:'bg-hill',em:'🌅',sp:null,
+text:`走った。
+
+坂を下り、石段を駆け下り、川沿いの道を走った。
+祭りの灯籠はとうに消えて、夜が白々と明けていた。
+
+なぜ走っているのか、わからなかった。
+ただ——走らなければいけない気がした。`},
+
+{bg:'bg-river',em:'🌊',sp:null,
+text:`川のほとりに、人が集まっていた。
+
+「ザネリが落ちて」「カムパネルラが飛び込んで」
+誰かの声が、断片的に耳に入ってきた。`},
+
+{bg:'bg-river',em:'🌊',sp:'誰か',
+text:`「カムパネルラが助けてくれたんだ。
+　ザネリは助かった。でも——カムパネルラは……
+　まだ、上がってきていない」`},
+
+{bg:'bg-river',em:'🌊',sp:null,
+text:`ジョバンニは立ち尽くした。
+
+川の水は黒く、静かに流れていた。
+夜明けの光が、水面に薄く広がっていた。
+
+〈カムパネルラ〉
+
+胸の中で、その名前を呼んだ。
+声は、出なかった。`},
+
+// ─────────────── 9: 切符の意味 ───────────────
+{bg:'bg-dawn',em:'✨',sp:null,ch:'終章　切符の意味',
+text:`泣かなかった。
+
+泣けなかった、というわけじゃない。
+ただ——あの列車の中のカムパネルラが、
+あまりにも鮮やかだったから。
+
+あの笑顔が、本物だったから。`},
+
+{bg:'bg-dawn',em:'✨',sp:null,
+text:`「ぼく、どこまでもジョバンニと一緒に行くよ」
+
+——そう言った声が、耳に残っていた。
+本物だった。
+本当のことを、言っていた。`},
+
+{bg:'bg-dawn',em:'✨',sp:null,
+text:`ポケットに手を入れた。
+あの緑色の切符は——もうなかった。
+
+でも、白い羽根だけは、まだある。`},
+
+{bg:'bg-dawn',em:'✨',sp:null,
+text:`〈本当の幸せって、なんだろう〉
+
+カムパネルラが最後まで考えていたことを、ジョバンニも考えた。
+答えはわからなかった。
+でも——考え続けることをやめたくなかった。`},
+
+{bg:'bg-dawn',em:'✨',sp:null,
+text:`空が明るくなってきた。
+東の方に、朝の星がひとつ、輝いていた。
+
+——本当に、銀河の星なんだろうか。
+それとも、カムパネルラが光になったのだろうか。`},
+
+{bg:'bg-dawn',em:'🌄',sp:null,
+text:`〈カムパネルラは行ってしまった。でも、ぼくは生きている〉
+
+ジョバンニは立ち上がった。
+〈ぼくがちゃんと生きることが——カムパネルラへの、答えかもしれない〉
+
+朝の光の中を、歩き始めた。`},
+
+{bg:'bg-dawn',em:'🌄',sp:null,
+text:`お母さんが待っている。
+お父さんが、もうすぐ帰ってくるかもしれない。
+やることが、ある。
+生きることが、ある。`},
+
+// FINAL
+{bg:'bg-hill',em:'🌌',sp:null,
+text:`空の向こうに、銀河は今日も広がっているだろう。
+そこに、あの列車が走っているだろう。
+
+そして——カムパネルラが、窓の外を見ながら、
+微笑んでいるだろう。
+
+「ジョバンニ、本当の幸せを見つけてね」——そう言いながら。`,isEnd:true},
+];
+
+// ═══════════════════════════════════════════
+//  STAR GENERATOR
+// ═══════════════════════════════════════════
+function genStars(el, count=80){
+  const shadows=Array.from({length:count},()=>{
+    const x=(Math.random()*100).toFixed(1)+'%';
+    const y=(Math.random()*100).toFixed(1)+'%';
+    const op=(0.2+Math.random()*0.8).toFixed(2);
+    const sz=Math.random()<0.85?'1px':'2px';
+    return `${x} ${y} 0 ${sz} rgba(255,255,255,${op})`;
+  });
+  el.style.boxShadow=shadows.join(',');
+  el.style.cssText+=';position:absolute;width:1px;height:1px;top:0;left:0;border-radius:50%;';
+  return el;
+}
+
+// Generate title stars
+(function(){
+  const cont=document.getElementById('title-stars');
+  if(!cont){return;}
+  cont.style.cssText='position:absolute;inset:0;pointer-events:none;';
+  const s=document.createElement('div');
+  genStars(s,100);
+  cont.appendChild(s);
+})();
+
+// ═══════════════════════════════════════════
+//  ENGINE
+// ═══════════════════════════════════════════
+let cur=0, typing=false, autoMode=false, autoTimer=null, starsEl=null;
+
+function initStars(){
+  const el=document.getElementById('stars');
+  el.innerHTML='';
+  const s=document.createElement('div');
+  genStars(s,120);
+  el.appendChild(s);
+  starsEl=s;
+}
+
+function showScene(idx){
+  if(idx<0||idx>=STORY.length)return;
+  cur=idx;
+  const sc=STORY[idx];
+
+  // Progress
+  document.getElementById('progressBar').style.width=(idx/(STORY.length-1)*100)+'%';
+
+  // Chapter title
+  if(sc.ch){
+    const card=document.getElementById('chapter-card');
+    const parts=sc.ch.split('　');
+    document.getElementById('chapter-no').textContent=parts[0]||'';
+    document.getElementById('chapter-name').textContent=parts.slice(1).join('　')||sc.ch;
+    document.getElementById('tb-chapter').textContent=sc.ch;
+    card.classList.add('show');
+    setTimeout(()=>{card.classList.remove('show');},2200);
+  }
+
+  // Background transition
+  const bg=document.getElementById('bg');
+  const bgClasses=['bg-classroom','bg-printshop','bg-home','bg-festival',
+    'bg-hill','bg-station','bg-train','bg-coast','bg-farewell','bg-river','bg-dawn'];
+  bg.className='';
+  if(sc.bg) bg.classList.add(sc.bg);
+
+  // Stars (show for space scenes)
+  const showStars=['bg-hill','bg-station','bg-train','bg-coast','bg-farewell','bg-dawn'].includes(sc.bg);
+  document.getElementById('stars').style.opacity=showStars?'1':'0';
+
+  // Scene art
+  const art=document.getElementById('scene-art');
+  art.style.opacity='0';art.style.transform='translateY(8px)';
+  setTimeout(()=>{art.textContent=sc.em||'';art.style.opacity='1';art.style.transform='translateY(0)';},200);
+
+  // Speaker
+  const spEl=document.getElementById('speaker-bar');
+  spEl.textContent=sc.sp||'';
+  spEl.style.color=sc.sp?'var(--acc2)':'var(--txt2)';
+
+  // Choices
+  const choicesEl=document.getElementById('choices');
+  const nextEl=document.getElementById('next-indicator');
+  choicesEl.style.display='none';
+  choicesEl.innerHTML='';
+  nextEl.style.display='block';
+
+  if(sc.choices){
+    nextEl.style.display='none';
+    // Show choices after text types
+  }
+
+  // Ending
+  if(sc.isEnd){
+    nextEl.style.display='none';
+  }
+
+  // Type text
+  typeText(sc.text,()=>{
+    if(sc.choices){
+      choicesEl.style.display='flex';
+      sc.choices.forEach(ch=>{
+        const b=document.createElement('button');
+        b.className='choice-btn';
+        b.textContent=ch.label;
+        b.onclick=()=>showScene(ch.goto??cur+1);
+        choicesEl.appendChild(b);
+      });
+    }else if(sc.isEnd){
+      setTimeout(showEnding, 1200);
+    }else if(autoMode){
+      autoTimer=setTimeout(()=>showScene(cur+1),3000);
+    }
+  });
+}
+
+let typeTimer=null;
+function typeText(txt,cb){
+  typing=true;
+  const el=document.getElementById('text-area');
+  el.textContent='';
+  let i=0;
+  if(typeTimer)clearInterval(typeTimer);
+  typeTimer=setInterval(()=>{
+    if(i<txt.length){el.textContent+=txt[i++];}
+    else{
+      clearInterval(typeTimer);typeTimer=null;
+      typing=false;cb&&cb();
+    }
+  },22);
+}
+
+function skipType(){
+  if(typeTimer){clearInterval(typeTimer);typeTimer=null;
+    document.getElementById('text-area').textContent=STORY[cur].text;
+    typing=false;
+    const sc=STORY[cur];
+    if(sc.choices){
+      const choicesEl=document.getElementById('choices');
+      choicesEl.style.display='flex';
+      choicesEl.innerHTML='';
+      sc.choices.forEach(ch=>{
+        const b=document.createElement('button');
+        b.className='choice-btn';
+        b.textContent=ch.label;
+        b.onclick=()=>showScene(ch.goto??cur+1);
+        choicesEl.appendChild(b);
+      });
+      document.getElementById('next-indicator').style.display='none';
+    }else if(sc.isEnd){
+      setTimeout(showEnding, 800);
+    }
+  }
+}
+
+function advance(){
+  if(typing){skipType();return;}
+  const sc=STORY[cur];
+  if(sc.choices||sc.isEnd)return;
+  if(cur+1<STORY.length)showScene(cur+1);
+}
+
+function showEnding(){
+  const el=document.getElementById('s-ending');
+  el.style.display='flex';
+  document.getElementById('endText').textContent=
+`これは、宮沢賢治が晩年まで書き続けた物語。
+友を失った少年が、その痛みの中に
+「本当の幸せ」への問いを見出す——
+
+あなたにとって、銀河鉄道の切符は
+どんな意味を持っていましたか。
+
+原作：宮沢賢治「銀河鉄道の夜」（青空文庫）
+現代語ノベルゲーム版`;
+}
+
+// ─── CONTROLS ────────────────────────────────
+document.getElementById('scene').addEventListener('click',advance);
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.code==='Enter'){e.preventDefault();advance();}
+});
+
+document.getElementById('btnSkip').addEventListener('click',()=>{
+  if(typeTimer)skipType();else advance();
+});
+
+document.getElementById('btnAuto').addEventListener('click',function(){
+  autoMode=!autoMode;
+  this.textContent=autoMode?'停止':'オート';
+  this.style.borderColor=autoMode?'var(--acc)':'var(--bdr)';
+  this.style.color=autoMode?'var(--acc)':'var(--txt2)';
+  if(autoMode&&!typing){autoTimer=setTimeout(()=>advance(),3000);}
+  else{clearTimeout(autoTimer);}
+});
+
+// Title screen
+document.getElementById('btnTitle').addEventListener('click',()=>{
+  document.getElementById('s-title').style.display='none';
+  initStars();showScene(0);
+});
+
+// Stars animation
+setInterval(()=>{
+  if(starsEl&&Math.random()<0.3){
+    genStars(starsEl,120);
+  }
+},8000);
+</script>
+</body>
+</html>
