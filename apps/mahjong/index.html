@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>麻雀</title>
+<style>
+:root{--bg:#0a1a0a;--sur:#0f2010;--bdr:#1a4020;--txt:#d4e8d0;--mut:#6a8870;--acc:#4ac860;--gold:#d4a820;--red:#e85050;--blue:#4080e0;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Noto Sans JP','Inter',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:12px 8px;gap:8px;}
+h1{font-size:.95rem;letter-spacing:.15em;color:var(--acc);}
+.board{width:100%;max-width:600px;background:var(--sur);border:1px solid var(--bdr);border-radius:12px;overflow:hidden;}
+.info-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;
+  background:rgba(0,0,0,.3);font-size:.72rem;color:var(--mut);}
+.info-bar span{font-weight:700;color:var(--txt);}
+.cpu-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;
+  border-bottom:1px solid var(--bdr);font-size:.78rem;}
+.cpu-row.active{background:rgba(74,200,96,.05);}
+.cpu-name{width:70px;font-weight:700;}
+.cpu-tiles{display:flex;gap:2px;flex-wrap:wrap;}
+.tile-back{font-size:1.1rem;line-height:1;}
+.cpu-discard{font-size:.72rem;color:var(--mut);min-width:50px;text-align:right;}
+.discard-area{
+  padding:8px 12px;min-height:56px;background:rgba(0,0,0,.15);
+  border-bottom:1px solid var(--bdr);
+}
+.discard-label{font-size:.65rem;color:var(--mut);margin-bottom:4px;}
+.discard-tiles{display:flex;flex-wrap:wrap;gap:3px;}
+.dis-tile{font-size:1.15rem;line-height:1;}
+.dis-tile.last{outline:2px solid var(--red);border-radius:3px;}
+.msg-bar{padding:8px 14px;min-height:36px;font-size:.82rem;background:rgba(0,0,0,.2);
+  color:var(--txt);border-bottom:1px solid var(--bdr);line-height:1.5;}
+.human-area{padding:10px 12px;}
+.human-header{display:flex;justify-content:space-between;font-size:.72rem;color:var(--mut);margin-bottom:6px;}
+.human-tiles{display:flex;flex-wrap:wrap;gap:4px;min-height:44px;}
+.htile{
+  font-size:1.5rem;line-height:1;cursor:pointer;
+  border-radius:4px;transition:transform .1s;
+  border:2px solid transparent;padding:1px;
+  user-select:none;
+}
+.htile:hover{transform:translateY(-4px);}
+.htile.drawn{border-color:var(--acc);transform:translateY(-6px);}
+.htile.selected{transform:translateY(-6px);border-color:var(--gold);}
+.actions{padding:8px 12px;display:flex;gap:8px;flex-wrap:wrap;}
+.abtn{
+  padding:8px 16px;background:none;border:1px solid var(--bdr);border-radius:6px;
+  color:var(--txt);font-size:.82rem;font-family:inherit;cursor:pointer;transition:all .15s;
+}
+.abtn:hover:not(:disabled){border-color:var(--acc);color:var(--acc);}
+.abtn.tsumo{border-color:var(--gold);color:var(--gold);}
+.abtn.ron{border-color:var(--red);color:var(--red);}
+.abtn.pass{border-color:var(--mut);color:var(--mut);}
+.abtn:disabled{opacity:.3;cursor:default;}
+.scores{width:100%;max-width:600px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.score-box{background:var(--sur);border:1px solid var(--bdr);border-radius:8px;
+  padding:8px;text-align:center;font-size:.75rem;}
+.score-name{color:var(--mut);margin-bottom:2px;}
+.score-val{font-weight:700;font-size:1rem;color:var(--gold);}
+.score-box.active{border-color:var(--acc);}
+.result-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10;
+  align-items:center;justify-content:center;
+}
+.result-overlay.show{display:flex;}
+.result-box{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;
+  padding:24px;text-align:center;display:flex;flex-direction:column;gap:14px;max-width:320px;width:90%;}
+.result-title{font-size:1.3rem;font-weight:700;}
+.result-body{font-size:.85rem;line-height:2;color:var(--mut);}
+.result-btn{
+  padding:10px;background:var(--acc);border:none;border-radius:8px;
+  color:#000;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;
+}
+</style>
+</head>
+<body>
+<h1>🀄 麻雀 — CPU対戦</h1>
+
+<div class="scores" id="scores"></div>
+
+<div class="board">
+  <div class="info-bar">
+    <span>東一局</span>
+    <span id="wallCount">残り: 0枚</span>
+    <span id="turnInfo">順番待ち</span>
+  </div>
+  <!-- CPU players -->
+  <div class="cpu-row" id="cpu-S"><span class="cpu-name">南 CPU-S</span><div class="cpu-tiles" id="ct-S"></div><div class="cpu-discard" id="cd-S">—</div></div>
+  <div class="cpu-row" id="cpu-W"><span class="cpu-name">西 CPU-W</span><div class="cpu-tiles" id="ct-W"></div><div class="cpu-discard" id="cd-W">—</div></div>
+  <div class="cpu-row" id="cpu-N"><span class="cpu-name">北 CPU-N</span><div class="cpu-tiles" id="ct-N"></div><div class="cpu-discard" id="cd-N">—</div></div>
+  <!-- Discard river -->
+  <div class="discard-area">
+    <div class="discard-label">捨て牌 (直近24枚)</div>
+    <div class="discard-tiles" id="discardRiver"></div>
+  </div>
+  <!-- Message -->
+  <div class="msg-bar" id="msg">麻雀を開始しています…</div>
+  <!-- Human area -->
+  <div class="human-area">
+    <div class="human-header">
+      <span>東 あなた</span>
+      <span id="humanInfo"></span>
+    </div>
+    <div class="human-tiles" id="humanTiles"></div>
+  </div>
+  <div class="actions" id="actions"></div>
+</div>
+
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-box">
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-body" id="resultBody"></div>
+    <button class="result-btn" onclick="nextRound()">次の局へ</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════ TILE DEFS ═══════════════
+// 0-8=1m-9m, 9-17=1p-9p, 18-26=1s-9s
+// 27=東,28=南,29=西,30=北,31=白,32=発,33=中
+function tileEm(t){
+  if(t<9)return String.fromCodePoint(0x1F007+t);
+  if(t<18)return String.fromCodePoint(0x1F019+(t-9));
+  if(t<27)return String.fromCodePoint(0x1F010+(t-18));
+  return['🀀','🀁','🀂','🀃','🀆','🀅','🀄'][t-27];
+}
+function tileName(t){
+  if(t<9)return(t+1)+'m';if(t<18)return(t-8)+'p';if(t<27)return(t-17)+'s';
+  return['東','南','西','北','白','発','中'][t-27];
+}
+function isTermOrHonor(t){return t>=27||(t<9&&(t%9===0||t%9===8))||(t>=9&&t<18&&(t%9===0||t%9===8))||(t>=18&&t<27&&(t%9===0||t%9===8));}
+function suit(t){return Math.floor(t/9);}
+function rank(t){return t%9;}
+
+function makeTileset(){const a=[];for(let i=0;i<34;i++)for(let j=0;j<4;j++)a.push(i);return a;}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+// ═══════════════ WIN DETECTION ═══════════════
+function removeFirst(arr,v){const i=arr.indexOf(v);if(i<0)return null;const r=[...arr];r.splice(i,1);return r;}
+
+function canFormMentsu(tiles){
+  if(!tiles.length)return true;
+  const s=[...tiles].sort((a,b)=>a-b);
+  const f=s[0];
+  // koutsu
+  const r1=removeFirst(s,f);if(r1){const r2=removeFirst(r1,f);if(r2){const r3=removeFirst(r2,f);if(r3&&canFormMentsu(r3))return true;}}
+  // shuntsu
+  const su=Math.floor(f/9);
+  if(su<3&&Math.floor((f+1)/9)===su&&Math.floor((f+2)/9)===su){
+    const ra=removeFirst(s,f);if(ra){const rb=removeFirst(ra,f+1);if(rb){const rc=removeFirst(rb,f+2);if(rc&&canFormMentsu(rc))return true;}}
+  }
+  return false;
+}
+
+function canWin(tiles14){
+  const s=[...tiles14].sort((a,b)=>a-b);
+  // chiitoitsu
+  const ct={};s.forEach(t=>ct[t]=(ct[t]||0)+1);
+  if(Object.values(ct).every(v=>v===2)&&Object.keys(ct).length===7)return true;
+  // 4 mentsu + 1 jantai
+  const tried=new Set();
+  for(let i=0;i<s.length;i++){
+    const p=s[i];if(tried.has(p))continue;tried.add(p);
+    const r1=removeFirst(s,p);if(!r1)continue;
+    const r2=removeFirst(r1,p);if(!r2)continue;
+    if(canFormMentsu(r2))return true;
+  }
+  return false;
+}
+
+// ═══════════════ YAKU ═══════════════
+function getYaku(tiles,tsumo,seatW,roundW){
+  const s=[...tiles].sort((a,b)=>a-b);
+  const ct={};s.forEach(t=>ct[t]=(ct[t]||0)+1);
+  const yaku=[];
+  // chiitoitsu
+  if(Object.values(ct).every(v=>v===2)&&Object.keys(ct).length===7){
+    return[{name:'七対子',han:2}];
+  }
+  // tanyao (断么九)
+  if(s.every(t=>suit(t)<3&&rank(t)>=1&&rank(t)<=7))yaku.push({name:'断么九',han:1});
+  // tsumo
+  if(tsumo)yaku.push({name:'門清自摸',han:1});
+  // yakuhai
+  [31,32,33,roundW,seatW].forEach(t=>{
+    if(t>=0&&(ct[t]||0)>=3)yaku.push({name:'役牌('+tileName(t)+')',han:1});
+  });
+  // honitsu (simplified: all same suit or honors)
+  const nonHonorSuits=new Set(s.filter(t=>suit(t)<3).map(t=>suit(t)));
+  if(nonHonorSuits.size===1&&s.some(t=>suit(t)<3))yaku.push({name:'混一色',han:2});
+  return yaku;
+}
+
+function calcScore(yaku){
+  const han=yaku.reduce((s,y)=>s+y.han,0);
+  if(han<=0)return 0;
+  if(han===1)return 1000;
+  if(han===2)return 2000;
+  if(han===3)return 4000;
+  return 8000;
+}
+
+// ═══════════════ CPU AI ═══════════════
+function tileScore(t,hand){
+  let s=0;
+  const cnt=hand.filter(x=>x===t).length;
+  if(cnt>=2)s+=4; // pair/triplet
+  if(suit(t)<3){
+    if(hand.includes(t-2)||hand.includes(t+2))s+=1;
+    if(hand.includes(t-1)||hand.includes(t+1))s+=2;
+  }
+  if(t>=27)s-=1; // honor tiles slightly less valuable
+  return s;
+}
+
+function chooseCpuDiscard(hand14){
+  const scores=hand14.map(t=>({t,s:tileScore(t,hand14)}));
+  scores.sort((a,b)=>a.s-b.s);
+  return scores[0].t;
+}
+
+// ═══════════════ GAME STATE ═══════════════
+const PLAYERS=[
+  {name:'あなた',seat:27,isHuman:true,  hand:[],discards:[],score:25000},
+  {name:'CPU-S', seat:28,isHuman:false, hand:[],discards:[],score:25000},
+  {name:'CPU-W', seat:29,isHuman:false, hand:[],discards:[],score:25000},
+  {name:'CPU-N', seat:30,isHuman:false, hand:[],discards:[],score:25000},
+];
+let wall=[],turn=0,roundWind=27,drawnTile=null,lastDiscard=null,lastDiscardBy=null,locked=false;
+let riverAll=[]; // all discards for display
+
+function initRound(){
+  wall=shuffle(makeTileset());
+  PLAYERS.forEach(p=>{p.hand=wall.splice(0,13);p.discards=[];});
+  turn=0;drawnTile=null;lastDiscard=null;lastDiscardBy=null;locked=false;riverAll=[];
+  setMsg('東一局 — 東家（あなた）から開始です');
+  renderAll();
+  setTimeout(()=>doTurn(0),600);
+}
+
+function doTurn(who){
+  if(locked)return;
+  if(!wall.length){roundEnd('流局（牌山が尽きました）');return;}
+  const p=PLAYERS[who];
+  drawnTile=wall.shift();
+  p.hand.push(drawnTile);
+  document.getElementById('wallCount').textContent='残り: '+wall.length+'枚';
+  document.getElementById('turnInfo').textContent=(p.isHuman?'あなた':p.name)+'の番';
+  // Highlight active CPU
+  ['S','W','N'].forEach((k,i)=>{
+    document.getElementById('cpu-'+k).classList.toggle('active',who===i+1);
+  });
+
+  if(p.isHuman){
+    renderHuman(true);
+    // Check tsumo
+    const canT=canWin(p.hand)&&getYaku(p.hand,true,p.seat,roundWind).length>0;
+    setMsg('牌を引きました。捨て牌をクリックしてください。'+( canT?' 「ツモ」できます！':''));
+    renderActions(canT?'tsumo':null,null);
+  }else{
+    // CPU turn
+    setTimeout(()=>cpuTurn(who),400);
+  }
+}
+
+function cpuTurn(who){
+  const p=PLAYERS[who];
+  // Check tsumo
+  const canT=canWin(p.hand)&&getYaku(p.hand,true,p.seat,roundWind).length>0;
+  if(canT){
+    const yaku=getYaku(p.hand,true,p.seat,roundWind);
+    const sc=calcScore(yaku);
+    setMsg(p.name+'がツモ和了！\n役: '+yaku.map(y=>y.name).join('/')+ ' ('+sc+'点)');
+    applyWin(who,sc,true,-1);
+    return;
+  }
+  // Discard
+  const dis=chooseCpuDiscard(p.hand);
+  const idx=p.hand.indexOf(dis);p.hand.splice(idx,1);
+  p.discards.push(dis);riverAll.push({tile:dis,by:who});
+  lastDiscard=dis;lastDiscardBy=who;
+  document.getElementById('cd-'+['S','W','N'][who-1]).textContent=tileEm(dis);
+  renderRiver();
+  setMsg(p.name+'が '+tileName(dis)+' を切った');
+
+  // Check ron for human
+  const h=PLAYERS[0];
+  if(canWin([...h.hand,dis])&&getYaku([...h.hand,dis],false,h.seat,roundWind).length>0){
+    setMsg(p.name+'が '+tileName(dis)+' を切った\n「ロン」できます！');
+    renderHuman(false);
+    renderActions(null,'ron');
+    return;
+  }
+  renderAll();
+  setTimeout(()=>doTurn((who+1)%4),600);
+}
+
+function humanDiscard(idx){
+  if(locked)return;
+  const p=PLAYERS[0];
+  const dis=p.hand[idx];
+  p.hand.splice(idx,1);
+  p.discards.push(dis);
+  riverAll.push({tile:dis,by:0});
+  lastDiscard=dis;lastDiscardBy=0;
+  drawnTile=null;
+  setMsg('あなたが '+tileName(dis)+' を切った');
+  renderHuman(false);
+  renderActions(null,null);
+  renderRiver();
+  // Check ron for CPUs
+  for(let i=1;i<4;i++){
+    const cp=PLAYERS[i];
+    if(canWin([...cp.hand,dis])&&getYaku([...cp.hand,dis],false,cp.seat,roundWind).length>0){
+      const yaku=getYaku([...cp.hand,dis],false,cp.seat,roundWind);
+      const sc=calcScore(yaku);
+      setTimeout(()=>{
+        setMsg(cp.name+'がロン！（'+tileName(dis)+'）\n役: '+yaku.map(y=>y.name).join('/')+' ('+sc+'点)');
+        applyWin(i,sc,false,0);
+      },400);
+      return;
+    }
+  }
+  setTimeout(()=>doTurn(1),400);
+}
+
+function doTsumo(){
+  const p=PLAYERS[0];
+  const yaku=getYaku(p.hand,true,p.seat,roundWind);
+  const sc=calcScore(yaku);
+  setMsg('ツモ和了！\n役: '+yaku.map(y=>y.name).join('/')+' ('+sc+'点)');
+  applyWin(0,sc,true,-1);
+}
+
+function doRon(){
+  const p=PLAYERS[0];
+  const tiles=[...p.hand,lastDiscard];
+  const yaku=getYaku(tiles,false,p.seat,roundWind);
+  const sc=calcScore(yaku);
+  p.hand.push(lastDiscard);
+  setMsg('ロン！（'+tileName(lastDiscard)+'）\n役: '+yaku.map(y=>y.name).join('/')+' ('+sc+'点)');
+  applyWin(0,sc,false,lastDiscardBy);
+}
+
+function passRon(){
+  setMsg('パス。ゲームを続けます。');
+  renderActions(null,null);
+  renderHuman(false);
+  setTimeout(()=>doTurn((lastDiscardBy+1)%4),400);
+}
+
+function applyWin(winner,score,tsumo,loser){
+  locked=true;
+  PLAYERS[winner].score+=score;
+  if(!tsumo&&loser>=0){
+    PLAYERS[loser].score-=score;
+  }else if(tsumo){
+    const per=Math.ceil(score/3);
+    PLAYERS.forEach((p,i)=>{if(i!==winner)p.score-=per;});
+  }
+  renderScores();
+  // Show result
+  showResult(
+    PLAYERS[winner].name+'が和了！',
+    '役: '+getYaku(PLAYERS[winner].hand,tsumo,PLAYERS[winner].seat,roundWind).map(y=>y.name+' '+y.han+'翻').join('\n')+'\n\n得点: '+score+'点'
+  );
+}
+
+function roundEnd(msg){
+  locked=true;
+  showResult('流局',msg+'\n\n点数の移動はありません。');
+}
+
+function showResult(t,b){
+  document.getElementById('resultTitle').textContent=t;
+  document.getElementById('resultBody').textContent=b;
+  document.getElementById('resultOverlay').classList.add('show');
+}
+
+function nextRound(){
+  document.getElementById('resultOverlay').classList.remove('show');
+  initRound();
+}
+
+// ═══════════════ RENDER ═══════════════
+function renderAll(){
+  renderCPUs();renderHuman(false);renderRiver();renderScores();
+}
+
+function renderCPUs(){
+  const keys=['S','W','N'];
+  PLAYERS.slice(1).forEach((p,i)=>{
+    const k=keys[i];
+    document.getElementById('ct-'+k).innerHTML=
+      p.hand.map(()=>'<span class="tile-back">🀫</span>').join('');
+  });
+}
+
+function renderHuman(showDrawn){
+  const p=PLAYERS[0];
+  const el=document.getElementById('humanTiles');
+  el.innerHTML=p.hand.map((t,i)=>{
+    const isDrawn=showDrawn&&i===p.hand.length-1&&t===drawnTile;
+    return`<span class="htile ${isDrawn?'drawn':''}" onclick="humanDiscard(${i})">${tileEm(t)}</span>`;
+  }).join('');
+  document.getElementById('humanInfo').textContent=p.hand.length+'枚';
+}
+
+function renderRiver(){
+  const el=document.getElementById('discardRiver');
+  const recent=riverAll.slice(-24);
+  el.innerHTML=recent.map((d,i)=>
+    `<span class="dis-tile ${i===recent.length-1?'last':''}" title="${tileName(d.tile)}（${PLAYERS[d.by].name}）">${tileEm(d.tile)}</span>`
+  ).join('');
+}
+
+function renderScores(){
+  document.getElementById('scores').innerHTML=PLAYERS.map((p,i)=>`
+  <div class="score-box ${i===turn?'active':''}">
+    <div class="score-name">${i===0?'👤':['南','西','北'][i-1]} ${p.name}</div>
+    <div class="score-val">${p.score.toLocaleString()}</div>
+  </div>`).join('');
+}
+
+function renderActions(tsumoOk,ronOk){
+  const el=document.getElementById('actions');
+  let html='';
+  if(tsumoOk)html+=`<button class="abtn tsumo" onclick="doTsumo()">ツモ 🀄</button>`;
+  if(ronOk)html+=`<button class="abtn ron" onclick="doRon()">ロン!</button><button class="abtn pass" onclick="passRon()">パス</button>`;
+  el.innerHTML=html;
+}
+
+function setMsg(m){document.getElementById('msg').textContent=m;}
+
+initRound();
+</script>
+</body>
+</html>

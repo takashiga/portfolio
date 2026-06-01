@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ポーカー (5枚交換)</title>
+<style>
+:root{--bg:#0a1a0a;--sur:#0f2010;--bdr:#1a4020;--txt:#d4e8d0;--mut:#6a8870;--acc:#4ac860;--gold:#d4a820;--red:#e85050;--chip:#d4a820;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px;gap:12px;}
+h1{font-size:1rem;letter-spacing:.15em;color:var(--acc);}
+.table{
+  width:100%;max-width:600px;background:var(--sur);border:2px solid var(--bdr);
+  border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:14px;
+}
+.player-area{display:flex;flex-direction:column;gap:8px;}
+.player-header{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--mut);}
+.player-name{font-weight:700;color:var(--txt);}
+.chips{color:var(--gold);font-weight:700;}
+.bet-info{color:var(--acc);font-size:.72rem;}
+.hand{display:flex;gap:6px;flex-wrap:wrap;min-height:72px;align-items:center;}
+.card{
+  width:48px;height:68px;background:#f5f0e8;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;font-weight:700;cursor:pointer;
+  border:2px solid #ddd;transition:all .15s;position:relative;
+  flex-shrink:0;user-select:none;
+}
+.card.red{color:#d03030;}
+.card.black{color:#101010;}
+.card.back{background:#1a4060;border-color:#2a5080;color:transparent;font-size:0;}
+.card.back::after{content:'🂠';font-size:1.8rem;color:#3a6090;}
+.card.selected{transform:translateY(-8px);border-color:var(--acc);box-shadow:0 4px 12px rgba(74,200,96,.4);}
+.card.new-card{animation:deal .3s ease-out;}
+@keyframes deal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.divider{border:none;border-top:1px solid var(--bdr);}
+.pot-area{text-align:center;font-size:.88rem;}
+.pot{font-size:1.3rem;font-weight:700;color:var(--gold);}
+.msg{
+  text-align:center;min-height:40px;font-size:.88rem;line-height:1.7;
+  padding:8px;background:rgba(0,0,0,.3);border-radius:8px;
+}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+.abtn{
+  padding:9px 20px;background:none;border:1px solid var(--bdr);border-radius:8px;
+  color:var(--txt);font-size:.85rem;font-family:inherit;cursor:pointer;transition:all .15s;font-weight:600;
+}
+.abtn:hover:not(:disabled){border-color:var(--acc);color:var(--acc);}
+.abtn.primary{background:var(--acc);border-color:var(--acc);color:#000;}
+.abtn.danger{border-color:var(--red);color:var(--red);}
+.abtn:disabled{opacity:.3;cursor:default;}
+.rank-badge{
+  position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
+  font-size:.62rem;color:var(--mut);white-space:nowrap;
+}
+.hand-wrap{position:relative;padding-bottom:28px;}
+.exchange-hint{font-size:.72rem;color:var(--mut);text-align:center;}
+</style>
+</head>
+<body>
+<h1>♠ POKER — 5枚交換式</h1>
+<div class="table">
+  <!-- CPU players -->
+  <div class="player-area" id="cpu1-area"></div>
+  <div class="player-area" id="cpu2-area"></div>
+  <hr class="divider">
+  <!-- Pot -->
+  <div class="pot-area">
+    <div style="font-size:.72rem;color:var(--mut)">ポット</div>
+    <div class="pot" id="pot">0</div>
+  </div>
+  <!-- Message -->
+  <div class="msg" id="msg">ゲームを開始してください</div>
+  <!-- Human player -->
+  <div class="player-area" id="human-area"></div>
+  <!-- Actions -->
+  <div class="actions" id="actions"></div>
+</div>
+
+<script>
+// ─── CARD ───────────────────────────────────────────
+const SUITS=['♠','♥','♦','♣'],RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const SUIT_RED=new Set([1,2]); // ♥♦
+function makeCard(s,r){return{s,r,id:s*13+r};}
+function cardLabel(c){return RANKS[c.r]+SUITS[c.s];}
+function isRed(c){return SUIT_RED.has(c.s);}
+function newDeck(){const d=[];for(let s=0;s<4;s++)for(let r=0;r<13;r++)d.push(makeCard(s,r));return d;}
+function shuffle(d){for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}return d;}
+
+// ─── HAND EVALUATION ─────────────────────────────────
+function evalHand(cards){
+  const ranks=cards.map(c=>c.r).sort((a,b)=>a-b);
+  const suits=cards.map(c=>c.s);
+  const counts={};ranks.forEach(r=>counts[r]=(counts[r]||0)+1);
+  const cv=Object.values(counts).sort((a,b)=>b-a);
+  const isFlush=suits.every(s=>s===suits[0]);
+  const isStraight=ranks[4]-ranks[0]===4&&cv[0]===1||
+    (ranks.join()===`0,9,10,11,12`); // A-2-3-4-5 (low ace)
+  const isRoyalFlush=isFlush&&isStraight&&ranks[0]===8; // 10-A
+  const isSF=isFlush&&isStraight;
+  if(isRoyalFlush)return{rank:9,name:'ロイヤルフラッシュ'};
+  if(isSF)return{rank:8,name:'ストレートフラッシュ'};
+  if(cv[0]===4)return{rank:7,name:'フォーカード'};
+  if(cv[0]===3&&cv[1]===2)return{rank:6,name:'フルハウス'};
+  if(isFlush)return{rank:5,name:'フラッシュ'};
+  if(isStraight)return{rank:4,name:'ストレート'};
+  if(cv[0]===3)return{rank:3,name:'スリーカード'};
+  if(cv[0]===2&&cv[1]===2)return{rank:2,name:'ツーペア'};
+  if(cv[0]===2)return{rank:1,name:'ワンペア'};
+  return{rank:0,name:'ハイカード'};
+}
+
+function compareHands(a,b){
+  const ea=evalHand(a),eb=evalHand(b);
+  if(ea.rank!==eb.rank)return ea.rank>eb.rank?1:-1;
+  // Tiebreaker: compare high cards
+  const ra=[...a].sort((x,y)=>y.r-x.r).map(c=>c.r);
+  const rb=[...b].sort((x,y)=>y.r-x.r).map(c=>c.r);
+  for(let i=0;i<5;i++){if(ra[i]!==rb[i])return ra[i]>rb[i]?1:-1;}
+  return 0;
+}
+
+// ─── CPU STRATEGY ─────────────────────────────────────
+function cpuDiscard(hand){
+  // Decide which cards to exchange
+  const ev=evalHand(hand);
+  const ranks=hand.map(c=>c.r);
+  const counts={};ranks.forEach(r=>counts[r]=(counts[r]||0)+1);
+
+  if(ev.rank>=6)return[]; // Full house or better: keep all
+  if(ev.rank===5){// Flush: keep all
+    return[];
+  }
+  if(ev.rank===4){// Straight: keep all
+    return[];
+  }
+  if(ev.rank===7||ev.rank===8||ev.rank===9)return[];
+
+  // Three of a kind: discard 2 non-triple cards
+  if(ev.rank===3){
+    const triple=Object.entries(counts).find(([,v])=>v===3)[0];
+    return hand.filter(c=>c.r!==parseInt(triple)).slice(0,2).map(c=>c.id);
+  }
+  // Two pair: discard 1 non-pair
+  if(ev.rank===2){
+    const pairs=Object.entries(counts).filter(([,v])=>v===2).map(([k])=>parseInt(k));
+    return hand.filter(c=>!pairs.includes(c.r)).map(c=>c.id);
+  }
+  // One pair: discard 3 non-pair
+  if(ev.rank===1){
+    const pair=parseInt(Object.entries(counts).find(([,v])=>v===2)[0]);
+    return hand.filter(c=>c.r!==pair).slice(0,3).map(c=>c.id);
+  }
+  // High card: keep top 2 high cards
+  const sorted=[...hand].sort((a,b)=>b.r-a.r);
+  return sorted.slice(2).map(c=>c.id);
+}
+
+function cpuBet(hand,pot,myChips,phase){
+  const ev=evalHand(hand);
+  const str=ev.rank;
+  if(str>=6)return'raise';
+  if(str>=3)return'call';
+  if(str>=1)return Math.random()<.6?'call':'fold';
+  return Math.random()<.35?'call':'fold';
+}
+
+// ─── GAME STATE ───────────────────────────────────────
+let G;
+function newGame(){
+  G={
+    deck:[],
+    players:[
+      {name:'あなた',chips:1000,hand:[],bet:0,folded:false,isHuman:true},
+      {name:'CPU A', chips:1000,hand:[],bet:0,folded:false,isHuman:false},
+      {name:'CPU B', chips:1000,hand:[],bet:0,folded:false,isHuman:false},
+    ],
+    pot:0,phase:'start',// start > bet1 > draw > bet2 > showdown
+    ante:50,selected:new Set(),
+    msg:'',
+  };
+}
+
+function startRound(){
+  G.deck=shuffle(newDeck());
+  G.selected=new Set();
+  G.pot=0;
+  G.players.forEach(p=>{
+    p.hand=[];p.bet=0;p.folded=false;
+    const ante=Math.min(G.ante,p.chips);
+    p.chips-=ante;G.pot+=ante;
+  });
+  G.players.forEach(p=>{
+    for(let i=0;i<5;i++)p.hand.push(G.deck.pop());
+  });
+  G.phase='bet1';
+  setMsg('アンテ（'+G.ante+'）支払い済み。\n最初のベットフェーズです。');
+  render();
+}
+
+function setMsg(m){G.msg=m;document.getElementById('msg').textContent=m;}
+
+// ─── RENDER ───────────────────────────────────────────
+function render(){
+  const [human,...cpus]=G.players;
+  renderCPU(cpus[0],'cpu1-area',G.phase);
+  renderCPU(cpus[1],'cpu2-area',G.phase);
+  renderHuman(human);
+  document.getElementById('pot').textContent=G.pot;
+  renderActions();
+}
+
+function renderCPU(p,id,phase){
+  const showCards=phase==='showdown'&&!p.folded;
+  document.getElementById(id).innerHTML=`
+  <div class="player-header">
+    <span class="player-name">${p.folded?'<s>'+p.name+'</s>':p.name}</span>
+    <span class="chips">💰 ${p.chips}</span>
+    <span class="bet-info">ベット: ${p.bet}</span>
+  </div>
+  <div class="hand">
+    ${p.hand.map(c=>`<div class="card ${showCards?(isRed(c)?'red':'black'):'back'}">
+      ${showCards?cardLabel(c):''}
+    </div>`).join('')}
+    ${showCards&&!p.folded?`<div style="font-size:.75rem;color:var(--acc);align-self:flex-end;margin-left:4px">${evalHand(p.hand).name}</div>`:''}
+  </div>`;
+}
+
+function renderHuman(p){
+  const canSelect=G.phase==='draw';
+  document.getElementById('human-area').innerHTML=`
+  <div class="player-header">
+    <span class="player-name">👤 ${p.name}</span>
+    <span class="chips">💰 ${p.chips}</span>
+    <span class="bet-info">ベット: ${p.bet}</span>
+  </div>
+  <div class="hand-wrap">
+    <div class="hand">
+      ${p.hand.map(c=>`<div class="card ${isRed(c)?'red':'black'} ${G.selected.has(c.id)?'selected':''}"
+        onclick="${canSelect?`toggleSelect(${c.id})`:''}">
+        ${cardLabel(c)}
+      </div>`).join('')}
+    </div>
+    ${canSelect?'<div class="exchange-hint">交換するカードをタップして選択 → 「交換する」</div>':''}
+  </div>
+  <div style="font-size:.82rem;color:var(--acc);font-weight:700;margin-top:4px">${p.folded?'フォールド':evalHand(p.hand).name}</div>`;
+}
+
+function toggleSelect(id){
+  if(G.selected.has(id))G.selected.delete(id);
+  else if(G.selected.size<3)G.selected.add(id);
+  render();
+}
+
+function renderActions(){
+  const el=document.getElementById('actions');
+  const human=G.players[0];
+  if(G.phase==='start'||G.phase==='over'){
+    el.innerHTML=`<button class="abtn primary" onclick="startRound()">
+      ${G.phase==='start'?'ゲーム開始':'次のラウンド'}
+    </button>`;
+    return;
+  }
+  if(G.phase==='bet1'||G.phase==='bet2'){
+    const canRaise=human.chips>=100;
+    el.innerHTML=`
+    <button class="abtn" onclick="humanAction('check')">チェック / コール</button>
+    <button class="abtn ${canRaise?'':''}disabled" onclick="humanAction('raise')" ${!canRaise?'disabled':''}>レイズ (+100)</button>
+    <button class="abtn danger" onclick="humanAction('fold')">フォールド</button>`;
+    return;
+  }
+  if(G.phase==='draw'){
+    el.innerHTML=`<button class="abtn primary" onclick="humanDraw()">
+      ${G.selected.size?`${G.selected.size}枚交換する`:'交換しない（スタンドパット）'}
+    </button>`;
+    return;
+  }
+  el.innerHTML='';
+}
+
+// ─── ACTIONS ──────────────────────────────────────────
+function humanAction(act){
+  const human=G.players[0];
+  let msg='';
+  if(act==='fold'){human.folded=true;msg='フォールドしました。';}
+  else if(act==='check'){msg='チェック / コールしました。';}
+  else if(act==='raise'){
+    const r=Math.min(100,human.chips);human.chips-=r;human.bet+=r;G.pot+=r;
+    msg=`レイズ！ +${r} チップ投入。`;
+  }
+  setMsg(msg);
+  if(G.phase==='bet1'){
+    setTimeout(()=>{cpuBetPhase(G.phase);},400);
+  }else{
+    setTimeout(()=>{showdown();},400);
+  }
+}
+
+function cpuBetPhase(fromPhase){
+  const cpus=G.players.slice(1);
+  let idx=0;
+  function next(){
+    if(idx>=cpus.length){
+      if(fromPhase==='bet1'){G.phase='draw';setMsg('ドローフェーズです。交換するカードを選んでください。');render();}
+      else{showdown();}
+      return;
+    }
+    const p=cpus[idx++];
+    if(p.folded){next();return;}
+    const act=cpuBet(p.hand,G.pot,p.chips,fromPhase);
+    if(act==='fold'){p.folded=true;setMsg(p.name+' がフォールド');}
+    else if(act==='raise'){const r=Math.min(100,p.chips);p.chips-=r;p.bet+=r;G.pot+=r;setMsg(p.name+' がレイズ！');}
+    else{setMsg(p.name+' がコール');}
+    render();setTimeout(next,500);
+  }
+  next();
+}
+
+function humanDraw(){
+  const human=G.players[0];
+  const toExchange=[...G.selected];
+  human.hand=human.hand.filter(c=>!toExchange.includes(c.id));
+  while(human.hand.length<5)human.hand.push(G.deck.pop());
+  G.selected=new Set();
+  setMsg(toExchange.length?`${toExchange.length}枚交換しました。`:'スタンドパット。');
+  // CPU draw
+  G.players.slice(1).forEach(p=>{
+    if(p.folded)return;
+    const discard=cpuDiscard(p.hand);
+    p.hand=p.hand.filter(c=>!discard.includes(c.id));
+    while(p.hand.length<5)p.hand.push(G.deck.pop());
+  });
+  G.phase='bet2';
+  setMsg('最終ベットフェーズです。');
+  render();
+}
+
+function showdown(){
+  G.phase='showdown';
+  const active=G.players.filter(p=>!p.folded);
+  if(active.length===1){
+    const winner=active[0];
+    winner.chips+=G.pot;
+    setMsg(`${winner.name}の勝利！ （他全員フォールド）\n💰 ${G.pot} チップ獲得！`);
+  }else{
+    const sorted=[...active].sort((a,b)=>-compareHands(a.hand,b.hand));
+    const winner=sorted[0];
+    winner.chips+=G.pot;
+    const results=sorted.map(p=>`${p.name}: ${evalHand(p.hand).name}`).join(' / ');
+    setMsg(`🏆 ${winner.name}の勝利！\n${results}\n💰 ${G.pot} チップ獲得！`);
+  }
+  G.pot=0;G.phase='over';
+  render();
+  // Check game over
+  const broke=G.players.filter(p=>p.chips<=0);
+  if(broke.length){
+    setMsg(document.getElementById('msg').textContent+'\n\n'+broke.map(p=>p.name).join(',')+'が破産しました！');
+  }
+}
+newGame();render();
+</script>
+</body>
+</html>

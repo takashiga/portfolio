@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>カレンダー</title>
+<style>
+:root{--bg:#0f1117;--sur:#1a1d27;--sur2:#20253a;--bdr:#2a2d3e;--txt:#e2e4f0;--mut:#8b90a7;--acc:#6c63ff;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Inter','Noto Sans JP',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 12px;gap:16px;}
+.cal-wrap{width:100%;max-width:480px;}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.month-title{font-size:1.2rem;font-weight:700;letter-spacing:.02em;}
+.nav-btn{background:var(--sur);border:1px solid var(--bdr);border-radius:8px;
+  color:var(--txt);width:36px;height:36px;cursor:pointer;font-size:1rem;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.nav-btn:hover{border-color:var(--acc);color:var(--acc);}
+.daynames{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;}
+.dayname{text-align:center;font-size:.72rem;color:var(--mut);padding:4px 0;font-weight:600;}
+.dayname:first-child{color:#f87171;}
+.dayname:last-child{color:#60a5fa;}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cell{
+  aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:8px;cursor:pointer;font-size:.85rem;position:relative;
+  transition:background .1s;border:1px solid transparent;gap:2px;
+}
+.cell:hover{background:var(--sur);}
+.cell.other{color:#444;}
+.cell.today{background:rgba(108,99,255,.18);border-color:var(--acc);font-weight:700;}
+.cell.today .num{color:var(--acc);}
+.cell.sun .num{color:#f87171;}
+.cell.sat .num{color:#60a5fa;}
+.cell.marked{background:var(--sur2);}
+.cell.holiday .num{color:#f87171;}
+.cell .dot{width:5px;height:5px;border-radius:50%;background:var(--acc);}
+.note-area{
+  background:var(--sur);border:1px solid var(--bdr);border-radius:12px;
+  padding:16px;width:100%;max-width:480px;
+}
+.note-date{font-size:.8rem;color:var(--mut);margin-bottom:8px;}
+.note-input{
+  width:100%;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;
+  color:var(--txt);font-size:.88rem;padding:10px;font-family:inherit;
+  resize:none;outline:none;transition:border-color .2s;
+}
+.note-input:focus{border-color:var(--acc);}
+.note-actions{display:flex;gap:8px;margin-top:8px;}
+.note-btn{
+  padding:6px 16px;background:none;border:1px solid var(--bdr);border-radius:6px;
+  color:var(--txt);font-size:.8rem;cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.note-btn.save{border-color:var(--acc);color:var(--acc);}
+.note-btn:hover{opacity:.8;}
+.today-btn{
+  padding:7px 16px;background:none;border:1px solid var(--bdr);border-radius:8px;
+  color:var(--mut);font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.today-btn:hover{border-color:var(--acc);color:var(--acc);}
+</style>
+</head>
+<body>
+<div class="cal-wrap">
+  <div class="header">
+    <button class="nav-btn" onclick="move(-1)">‹</button>
+    <div>
+      <div class="month-title" id="mTitle"></div>
+    </div>
+    <button class="nav-btn" onclick="move(1)">›</button>
+  </div>
+  <div class="daynames">
+    <div class="dayname">日</div><div class="dayname">月</div><div class="dayname">火</div>
+    <div class="dayname">水</div><div class="dayname">木</div><div class="dayname">金</div>
+    <div class="dayname">土</div>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+<button class="today-btn" onclick="goToday()">今日に戻る</button>
+<div class="note-area" id="noteArea" style="display:none">
+  <div class="note-date" id="noteDate"></div>
+  <textarea class="note-input" id="noteInput" rows="3" placeholder="メモを入力…"></textarea>
+  <div class="note-actions">
+    <button class="note-btn save" onclick="saveNote()">保存</button>
+    <button class="note-btn" onclick="clearNote()">削除</button>
+    <button class="note-btn" onclick="closeNote()">閉じる</button>
+  </div>
+</div>
+<script>
+const HOLIDAYS={
+  '2025-01-01':'元日','2025-01-13':'成人の日','2025-02-11':'建国記念の日',
+  '2025-02-23':'天皇誕生日','2025-03-20':'春分の日','2025-04-29':'昭和の日',
+  '2025-05-03':'憲法記念日','2025-05-04':'みどりの日','2025-05-05':'こどもの日',
+  '2025-07-21':'海の日','2025-08-11':'山の日','2025-09-15':'敬老の日',
+  '2025-09-23':'秋分の日','2025-10-13':'スポーツの日','2025-11-03':'文化の日',
+  '2025-11-23':'勤労感謝の日',
+  '2026-01-01':'元日','2026-01-12':'成人の日','2026-02-11':'建国記念の日',
+  '2026-02-23':'天皇誕生日','2026-03-20':'春分の日','2026-04-29':'昭和の日',
+  '2026-05-03':'憲法記念日','2026-05-04':'みどりの日','2026-05-05':'こどもの日',
+  '2026-07-20':'海の日','2026-08-11':'山の日','2026-09-21':'敬老の日',
+  '2026-09-23':'秋分の日','2026-10-12':'スポーツの日','2026-11-03':'文化の日',
+  '2026-11-23':'勤労感謝の日',
+};
+
+let cur=new Date(),selDate=null;
+let notes=JSON.parse(localStorage.getItem('cal_notes')||'{}');
+
+function key(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+
+function move(n){cur=new Date(cur.getFullYear(),cur.getMonth()+n,1);render();}
+function goToday(){cur=new Date();render();}
+
+function render(){
+  const y=cur.getFullYear(),m=cur.getMonth();
+  document.getElementById('mTitle').textContent=`${y}年 ${m+1}月`;
+  const today=new Date();
+  const first=new Date(y,m,1),last=new Date(y,m+1,0);
+  const cells=[];
+  for(let i=0;i<first.getDay();i++)cells.push({d:new Date(y,m,1-first.getDay()+i),other:true});
+  for(let d=1;d<=last.getDate();d++)cells.push({d:new Date(y,m,d),other:false});
+  while(cells.length%7)cells.push({d:new Date(y,m+1,cells.length-last.getDate()-first.getDay()+1),other:true});
+
+  document.getElementById('grid').innerHTML=cells.map(({d,other})=>{
+    const k=key(d),dw=d.getDay();
+    const isToday=!other&&d.toDateString()===today.toDateString();
+    const isSel=selDate&&k===key(selDate);
+    const hl=HOLIDAYS[k];
+    const hasNote=notes[k];
+    const cls=['cell',other?'other':'',isToday?'today':'',isSel?'marked':'',
+      dw===0?'sun':dw===6?'sat':'',hl&&!other?'holiday':''].filter(Boolean).join(' ');
+    return `<div class="${cls}" onclick="selectDate('${k}',${d.getFullYear()},${d.getMonth()},${d.getDate()})">
+      <span class="num">${d.getDate()}</span>
+      ${hasNote&&!other?'<div class="dot"></div>':''}
+      ${hl&&!other?`<span style="font-size:.5rem;color:#f87171;line-height:1">${hl}</span>`:''}
+    </div>`;
+  }).join('');
+}
+
+function selectDate(k,y,m,d){
+  selDate=new Date(y,m,d);
+  render();
+  document.getElementById('noteArea').style.display='';
+  document.getElementById('noteDate').textContent=`${y}年${m+1}月${d}日`;
+  document.getElementById('noteInput').value=notes[k]||'';
+  document.getElementById('noteInput').focus();
+}
+
+function saveNote(){
+  if(!selDate)return;
+  const k=key(selDate);const v=document.getElementById('noteInput').value.trim();
+  if(v)notes[k]=v;else delete notes[k];
+  localStorage.setItem('cal_notes',JSON.stringify(notes));
+  render();
+}
+
+function clearNote(){
+  if(!selDate)return;
+  delete notes[key(selDate)];
+  localStorage.setItem('cal_notes',JSON.stringify(notes));
+  document.getElementById('noteInput').value='';
+  render();
+}
+
+function closeNote(){
+  selDate=null;
+  document.getElementById('noteArea').style.display='none';
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

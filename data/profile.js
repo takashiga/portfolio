@@ -10,6 +10,9 @@ const PROFILE = {
   tagline: "シンプルで使いやすいものを作ることが好きです。",
   bio: "滋賀県出身、横浜在住。膳所高校を卒業後、同志社大学に入学。現在はSIerに在籍し、日々修行中。プログラミングを通じて業務改善や自作アプリ開発に取り組んでいます。",
   skills: ["JavaScript", "HTML / CSS", "Python", "Java", "AWS", "Azure"],
+  links: {
+    github: "https://github.com/takashiga/portfolio"
+  },
   certifications: [
     {
       formal: "AWS Certified Cloud Practitioner（CLF-C02）",

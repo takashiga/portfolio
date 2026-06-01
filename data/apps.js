@@ -109,6 +109,46 @@ const APPS = [
     accent: "#f59e0b"
   },
   {
+    id: "stopwatch",
+    title: "ストップウォッチ",
+    description: "ラップタイム記録付き。最速・最遅ラップを自動でカラー表示。",
+    tags: ["ツール", "JavaScript"],
+    thumbnail: "⏱️",
+    path: "apps/stopwatch/index.html",
+    category: "tool",
+    accent: "#6c63ff"
+  },
+  {
+    id: "calendar",
+    title: "カレンダー",
+    description: "祝日表示対応のカレンダー。日付をクリックしてメモを保存。ローカルに記録されます。",
+    tags: ["ツール", "JavaScript"],
+    thumbnail: "📅",
+    path: "apps/calendar/index.html",
+    category: "tool",
+    accent: "#10b981"
+  },
+  {
+    id: "poker",
+    title: "ポーカー",
+    description: "CPU2人と対戦する5枚交換ポーカー。チップをかけてベット・レイズ・フォールドで戦え。",
+    tags: ["ゲーム", "JavaScript"],
+    thumbnail: "♠️",
+    path: "apps/poker/index.html",
+    category: "game",
+    accent: "#4ac860"
+  },
+  {
+    id: "mahjong",
+    title: "麻雀",
+    description: "CPU3人と対戦する本格麻雀。断么・七対子・役牌など主要な役に対応。ロン・ツモ判定あり。",
+    tags: ["ゲーム", "JavaScript"],
+    thumbnail: "🀄",
+    path: "apps/mahjong/index.html",
+    category: "game",
+    accent: "#e85050"
+  },
+  {
     id: "pathresolver",
     title: "パス変換ツール",
     description: "相対パスを絶対パスに変換。Windows / Unix / URL に対応。複数パスの一括変換・コピーも可能。",

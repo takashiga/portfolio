@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ストップウォッチ</title>
+<style>
+:root{--bg:#0f1117;--sur:#1a1d27;--bdr:#2a2d3e;--txt:#e2e4f0;--mut:#8b90a7;--acc:#6c63ff;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;padding:24px;gap:24px;}
+.timer{
+  font-size:clamp(3rem,12vw,6rem);font-weight:300;letter-spacing:.08em;
+  font-variant-numeric:tabular-nums;
+  background:var(--sur);border:1px solid var(--bdr);border-radius:16px;
+  padding:32px 48px;width:100%;max-width:480px;text-align:center;
+}
+.timer .ms{font-size:.45em;color:var(--mut);}
+.btns{display:flex;gap:12px;width:100%;max-width:480px;}
+.btn{
+  flex:1;padding:14px;border:1px solid var(--bdr);border-radius:10px;
+  background:var(--sur);color:var(--txt);font-size:.95rem;font-weight:600;
+  font-family:inherit;cursor:pointer;transition:all .15s;
+}
+.btn:hover{border-color:var(--acc);color:var(--acc);}
+.btn.start{background:var(--acc);border-color:var(--acc);color:#fff;}
+.btn.start:hover{opacity:.85;}
+.btn.stop{background:rgba(248,113,113,.15);border-color:#f87171;color:#f87171;}
+.btn:disabled{opacity:.3;cursor:default;}
+.laps{width:100%;max-width:480px;display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
+.lap{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:var(--sur);border:1px solid var(--bdr);border-radius:8px;
+  font-size:.85rem;
+}
+.lap-no{color:var(--mut);font-size:.75rem;}
+.lap-time{font-variant-numeric:tabular-nums;font-weight:600;}
+.lap.best .lap-time{color:#4ade80;}
+.lap.worst .lap-time{color:#f87171;}
+.lap-diff{font-size:.72rem;color:var(--mut);}
+</style>
+</head>
+<body>
+<div class="timer" id="display">
+  <span id="main">00:00</span><span class="ms">.<span id="ms">00</span></span>
+</div>
+<div class="btns">
+  <button class="btn start" id="btnMain" onclick="toggleTimer()">スタート</button>
+  <button class="btn" id="btnLap" onclick="addLap()" disabled>ラップ</button>
+  <button class="btn" id="btnReset" onclick="resetTimer()" disabled>リセット</button>
+</div>
+<div class="laps" id="laps"></div>
+<script>
+let start=0,elapsed=0,raf=null,running=false;
+let laps=[],lapStart=0;
+
+function toggleTimer(){
+  if(!running){
+    start=performance.now()-elapsed;
+    lapStart=lapStart||start;
+    raf=requestAnimationFrame(tick);
+    running=true;
+    document.getElementById('btnMain').textContent='ストップ';
+    document.getElementById('btnMain').className='btn stop';
+    document.getElementById('btnLap').disabled=false;
+    document.getElementById('btnReset').disabled=false;
+  }else{
+    cancelAnimationFrame(raf);running=false;
+    document.getElementById('btnMain').textContent='スタート';
+    document.getElementById('btnMain').className='btn start';
+  }
+}
+
+function tick(){
+  elapsed=performance.now()-start;
+  render(elapsed);
+  raf=requestAnimationFrame(tick);
+}
+
+function fmt(ms){
+  const t=Math.floor(ms);
+  const m=Math.floor(t/60000);
+  const s=Math.floor((t%60000)/1000);
+  const c=Math.floor((t%1000)/10);
+  return {main:`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`,ms:String(c).padStart(2,'0')};
+}
+
+function render(ms){
+  const {main,ms:m}=fmt(ms);
+  document.getElementById('main').textContent=main;
+  document.getElementById('ms').textContent=m;
+}
+
+function addLap(){
+  const now=performance.now()-start;
+  const lapTime=now-(lapStart-start);
+  lapStart=performance.now();
+  laps.unshift({total:now,lap:lapTime});
+  renderLaps();
+}
+
+function renderLaps(){
+  const times=laps.map(l=>l.lap);
+  const best=Math.min(...times),worst=Math.max(...times);
+  document.getElementById('laps').innerHTML=laps.map((l,i)=>{
+    const isB=l.lap===best&&laps.length>1,isW=l.lap===worst&&laps.length>1;
+    const {main,ms}=fmt(l.lap);
+    const {main:tm,ms:tms}=fmt(l.total);
+    return `<div class="lap ${isB?'best':isW?'worst':''}">
+      <span class="lap-no">Lap ${laps.length-i}</span>
+      <span class="lap-time">${main}.${ms}</span>
+      <span class="lap-diff">合計 ${tm}.${tms}</span>
+    </div>`;
+  }).join('');
+}
+
+function resetTimer(){
+  cancelAnimationFrame(raf);running=false;elapsed=0;lapStart=0;laps=[];
+  render(0);renderLaps();
+  document.getElementById('btnMain').textContent='スタート';
+  document.getElementById('btnMain').className='btn start';
+  document.getElementById('btnLap').disabled=true;
+  document.getElementById('btnReset').disabled=true;
+}
+</script>
+</body>
+</html>
