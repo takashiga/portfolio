@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>インベーダーゲーム</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      color: #0f0;
+      overflow: hidden;
+      user-select: none;
+    }
+    #ui {
+      display: flex;
+      justify-content: space-between;
+      width: min(600px, 100vw - 8px);
+      padding: 8px 4px;
+      font-size: clamp(12px, 3vw, 18px);
+      letter-spacing: 2px;
+    }
+    #canvas-wrap {
+      position: relative;
+      width: min(600px, 100vw - 8px);
+    }
+    #canvas {
+      border: 2px solid #0f0;
+      display: block;
+      background: #000;
+      width: 100%;
+      height: auto;
+    }
+    #message {
+      margin-top: 10px;
+      font-size: clamp(11px, 2.5vw, 14px);
+      color: #0a0;
+      letter-spacing: 1px;
+      height: 20px;
+      text-align: center;
+    }
+    /* Mobile touch controls */
+    #touch-controls {
+      display: none;
+      margin-top: 12px;
+      gap: 12px;
+      align-items: center;
+    }
+    .t-btn {
+      background: rgba(0,255,0,0.1);
+      border: 2px solid #0f0;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 20px;
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .t-btn:active { background: rgba(0,255,0,0.25); }
+    #shoot-btn { font-size: 14px; width: 80px; letter-spacing: 1px; }
+    @media (pointer: coarse) {
+      #touch-controls { display: flex; }
+    }
+    @media (max-width: 480px) {
+      #touch-controls { display: flex; }
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <span>スコア: <span id="score">0</span></span>
+    <span>ステージ: <span id="stage">1</span></span>
+    <span>ライフ: <span id="lives">❤️❤️❤️</span></span>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="canvas" width="600" height="500"></canvas>
+  </div>
+  <div id="message"></div>
+  <div id="touch-controls">
+    <button class="t-btn" id="left-btn">←</button>
+    <button class="t-btn" id="shoot-btn">SHOOT</button>
+    <button class="t-btn" id="right-btn">→</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const livesEl = document.getElementById('lives');
+    const stageEl = document.getElementById('stage');
+    const messageEl = document.getElementById('message');
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    let state = 'title';
+    let score = 0;
+    let lives = 3;
+    let stage = 1;
+    let frameCount = 0;
+    let stateTimer = 0;
+
+    const keys = {};
+    document.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (state === 'title' || state === 'gameover') startGame();
+        else if (state === 'playing') tryShoot();
+      }
+    });
+    document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+    // タッチ操作
+    const leftBtn = document.getElementById('left-btn');
+    const rightBtn = document.getElementById('right-btn');
+    const shootBtn = document.getElementById('shoot-btn');
+
+    function holdKey(code, el) {
+      el.addEventListener('touchstart', e => { e.preventDefault(); keys[code] = true; }, { passive: false });
+      el.addEventListener('touchend', e => { e.preventDefault(); keys[code] = false; }, { passive: false });
+      el.addEventListener('mousedown', () => keys[code] = true);
+      el.addEventListener('mouseup', () => keys[code] = false);
+      el.addEventListener('mouseleave', () => keys[code] = false);
+    }
+    holdKey('ArrowLeft', leftBtn);
+    holdKey('ArrowRight', rightBtn);
+    shootBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (state === 'title' || state === 'gameover') startGame();
+      else tryShoot();
+    }, { passive: false });
+    shootBtn.addEventListener('click', () => {
+      if (state === 'title' || state === 'gameover') startGame();
+      else tryShoot();
+    });
+
+    // タイトル画面クリックでスタート
+    canvas.addEventListener('click', () => {
+      if (state === 'title' || state === 'gameover') startGame();
+    });
+
+    const player = {
+      x: W / 2, y: H - 50,
+      w: 36, h: 20,
+      speed: 4,
+      cooldown: 0,
+      reset() { this.x = W / 2; this.cooldown = 0; }
+    };
+
+    let bullets = [];
+    let enemyBullets = [];
+    let shields = [];
+    let enemies = [];
+    let enemyDir = 1;
+    let enemySpeedX = 1.0;
+    let enemySpeedY = 16;
+    let enemyShootTimer = 0;
+    let enemyShootInterval = 90;
+    let ufo = { active: false, x: 0, y: 40, dir: 1, timer: 0 };
+
+    function drawPixel(x, y, size, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, size, size);
+    }
+
+    function drawInvader(x, y, type, frame) {
+      const s = 3;
+      ctx.fillStyle = type === 0 ? '#f0f' : type === 1 ? '#0ff' : '#ff0';
+      const shapes = [
+        [
+          [0,0,1,0,0,0,1,0,0],
+          [0,0,0,1,0,1,0,0,0],
+          [0,0,1,1,1,1,1,0,0],
+          [0,1,1,0,1,0,1,1,0],
+          [1,1,1,1,1,1,1,1,1],
+          [1,0,1,1,1,1,1,0,1],
+          [1,0,1,0,0,0,1,0,1],
+          [0,0,0,1,1,1,0,0,0],
+        ],
+        [
+          [0,0,0,1,1,1,0,0,0],
+          [0,1,1,1,1,1,1,1,0],
+          [1,1,0,1,1,1,0,1,1],
+          [1,1,1,1,1,1,1,1,1],
+          [0,1,1,1,1,1,1,1,0],
+          [0,0,1,0,0,0,1,0,0],
+          [0,1,0,1,1,1,0,1,0],
+          [1,0,0,0,0,0,0,0,1],
+        ],
+        [
+          [0,0,1,0,0,0,1,0,0],
+          [0,0,0,1,0,1,0,0,0],
+          [0,0,1,1,1,1,1,0,0],
+          [0,1,0,1,1,1,0,1,0],
+          [0,1,1,1,1,1,1,1,0],
+          [0,1,0,0,0,0,0,1,0],
+          [0,0,1,0,0,0,1,0,0],
+          [0,0,0,1,0,1,0,0,0],
+        ],
+      ];
+      const pattern = shapes[type % shapes.length];
+      const anim = frame % 2 === 0 ? 0 : 1;
+      const px = x - (pattern[0].length * s) / 2;
+      const py = y - (pattern.length * s) / 2;
+      pattern.forEach((row, ry) => {
+        row.forEach((cell, rx) => {
+          if (cell) {
+            let drawRx = rx;
+            if (anim === 1 && ry >= 6) drawRx = rx + (type === 0 ? 1 : -1);
+            ctx.fillRect(px + drawRx * s, py + ry * s, s, s);
+          }
+        });
+      });
+    }
+
+    function drawPlayer(x, y) {
+      const s = 3;
+      ctx.fillStyle = '#0f0';
+      const shape = [
+        [0,0,0,0,1,0,0,0,0],
+        [0,0,0,1,1,1,0,0,0],
+        [0,0,0,1,1,1,0,0,0],
+        [0,1,1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1],
+      ];
+      const px = x - (shape[0].length * s) / 2;
+      const py = y - (shape.length * s) / 2;
+      shape.forEach((row, ry) => {
+        row.forEach((cell, rx) => {
+          if (cell) ctx.fillRect(px + rx * s, py + ry * s, s, s);
+        });
+      });
+    }
+
+    function drawShield(shield) {
+      const s = 4;
+      shield.blocks.forEach((row, ry) => {
+        row.forEach((cell, rx) => {
+          if (cell > 0) {
+            ctx.fillStyle = `rgba(0,255,0,${cell / 3})`;
+            ctx.fillRect(shield.x + rx * s, shield.y + ry * s, s, s);
+          }
+        });
+      });
+    }
+
+    function drawUFO() {
+      if (!ufo.active) return;
+      ctx.fillStyle = '#f00';
+      const s = 3;
+      const shape = [
+        [0,0,1,1,1,1,1,0,0],
+        [0,1,1,1,1,1,1,1,0],
+        [1,0,1,0,1,0,1,0,1],
+        [0,1,1,1,1,1,1,1,0],
+      ];
+      const px = ufo.x - (shape[0].length * s) / 2;
+      const py = ufo.y - (shape.length * s) / 2;
+      shape.forEach((row, ry) => {
+        row.forEach((cell, rx) => {
+          if (cell) ctx.fillRect(px + rx * s, py + ry * s, s, s);
+        });
+      });
+    }
+
+    function initShields() {
+      shields = [];
+      const positions = [80, 200, 330, 460];
+      positions.forEach(sx => {
+        const shape = [
+          [0,0,1,1,1,1,1,1,0,0],
+          [0,1,1,1,1,1,1,1,1,0],
+          [1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1],
+          [1,1,0,0,0,0,0,0,1,1],
+        ];
+        shields.push({ x: sx - 20, y: H - 130, blocks: shape.map(row => row.map(v => v * 3)) });
+      });
+    }
+
+    function initEnemies() {
+      enemies = [];
+      const rows = 5, cols = 11;
+      const startX = 50, startY = 80;
+      const spacingX = 48, spacingY = 40;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const type = r === 0 ? 2 : r <= 2 ? 1 : 0;
+          const points = type === 2 ? 30 : type === 1 ? 20 : 10;
+          enemies.push({ x: startX + c * spacingX, y: startY + r * spacingY, type, points, alive: true, frame: 0 });
+        }
+      }
+      enemyDir = 1;
+      enemySpeedX = 0.8 + (stage - 1) * 0.3;
+      enemyShootInterval = Math.max(30, 90 - (stage - 1) * 15);
+    }
+
+    function startGame() {
+      score = 0; lives = 3; stage = 1;
+      bullets = []; enemyBullets = [];
+      ufo.active = false; ufo.timer = 0;
+      player.reset();
+      initShields(); initEnemies();
+      state = 'playing';
+      frameCount = 0;
+      updateUI();
+      messageEl.textContent = '';
+    }
+
+    function startStage() {
+      stage++;
+      bullets = []; enemyBullets = [];
+      ufo.active = false; ufo.timer = 0;
+      player.reset();
+      initShields(); initEnemies();
+      state = 'playing';
+      updateUI();
+    }
+
+    function updateUI() {
+      scoreEl.textContent = score;
+      stageEl.textContent = stage;
+      livesEl.textContent = '❤️'.repeat(lives);
+    }
+
+    function tryShoot() {
+      if (state !== 'playing') return;
+      if (player.cooldown > 0) return;
+      if (bullets.length >= 3) return;
+      bullets.push({ x: player.x, y: player.y - 10, vy: -8 });
+      player.cooldown = 15;
+    }
+
+    function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+      return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+    }
+
+    function checkBulletEnemyCollision() {
+      bullets = bullets.filter(b => {
+        let hit = false;
+        enemies.forEach(e => {
+          if (!e.alive) return;
+          if (rectsOverlap(b.x - 2, b.y - 8, 4, 12, e.x - 18, e.y - 12, 36, 24)) {
+            e.alive = false; score += e.points; hit = true;
+          }
+        });
+        return !hit;
+      });
+    }
+
+    function checkBulletUFOCollision() {
+      if (!ufo.active) return;
+      bullets = bullets.filter(b => {
+        if (rectsOverlap(b.x - 2, b.y - 8, 4, 12, ufo.x - 22, ufo.y - 8, 44, 16)) {
+          const bonus = [50, 100, 150, 200, 300][Math.floor(Math.random() * 5)];
+          score += bonus;
+          ufo.active = false;
+          showFloatingScore(ufo.x, ufo.y, bonus);
+          return false;
+        }
+        return true;
+      });
+    }
+
+    function checkBulletShieldCollision() {
+      const s = 4;
+      bullets = bullets.filter(b => {
+        for (let sh of shields) {
+          const rx = Math.floor((b.x - sh.x) / s);
+          const ry = Math.floor((b.y - sh.y) / s);
+          if (ry >= 0 && ry < sh.blocks.length && rx >= 0 && rx < sh.blocks[0].length) {
+            if (sh.blocks[ry][rx] > 0) { sh.blocks[ry][rx]--; return false; }
+          }
+        }
+        return true;
+      });
+      enemyBullets = enemyBullets.filter(b => {
+        for (let sh of shields) {
+          const rx = Math.floor((b.x - sh.x) / s);
+          const ry = Math.floor((b.y - sh.y) / s);
+          if (ry >= 0 && ry < sh.blocks.length && rx >= 0 && rx < sh.blocks[0].length) {
+            if (sh.blocks[ry][rx] > 0) { sh.blocks[ry][rx] = Math.max(0, sh.blocks[ry][rx] - 1); return false; }
+          }
+        }
+        return true;
+      });
+    }
+
+    function checkEnemyBulletPlayerCollision() {
+      enemyBullets = enemyBullets.filter(b => {
+        if (rectsOverlap(b.x - 2, b.y - 6, 4, 10, player.x - 18, player.y - 10, 36, 20)) {
+          loseLife(); return false;
+        }
+        return true;
+      });
+    }
+
+    function loseLife() {
+      lives--;
+      updateUI();
+      if (lives <= 0) {
+        state = 'gameover'; stateTimer = 0;
+        messageEl.textContent = 'ゲームオーバー ― タップ/SPACEでリスタート';
+      } else {
+        state = 'dead'; stateTimer = 0;
+        messageEl.textContent = '...';
+      }
+    }
+
+    let floatingScores = [];
+    function showFloatingScore(x, y, val) {
+      floatingScores.push({ x, y, val, life: 60 });
+    }
+
+    function update() {
+      frameCount++;
+      if (state === 'dead') {
+        stateTimer++;
+        if (stateTimer > 90) {
+          state = 'playing'; player.reset();
+          bullets = []; enemyBullets = [];
+          messageEl.textContent = '';
+        }
+        return;
+      }
+      if (state !== 'playing') return;
+
+      if (keys['ArrowLeft'] || keys['KeyA']) player.x = Math.max(20, player.x - player.speed);
+      if (keys['ArrowRight'] || keys['KeyD']) player.x = Math.min(W - 20, player.x + player.speed);
+      if (player.cooldown > 0) player.cooldown--;
+
+      bullets = bullets.filter(b => { b.y += b.vy; return b.y > 0; });
+      enemyBullets = enemyBullets.filter(b => { b.y += b.vy; return b.y < H; });
+
+      const alive = enemies.filter(e => e.alive);
+      if (alive.length === 0) {
+        state = 'stageclear'; stateTimer = 0;
+        messageEl.textContent = `ステージ ${stage} クリア！`;
+        updateUI();
+        return;
+      }
+
+      const speedMult = 1 + (55 - Math.min(55, alive.length)) * 0.015;
+      alive.forEach(e => {
+        e.x += enemyDir * enemySpeedX * speedMult;
+        if (frameCount % 30 === 0) e.frame++;
+      });
+
+      const minX = Math.min(...alive.map(e => e.x));
+      const maxX = Math.max(...alive.map(e => e.x));
+      if (maxX > W - 30 || minX < 30) {
+        enemyDir *= -1;
+        alive.forEach(e => { e.y += enemySpeedY; });
+      }
+
+      if (alive.some(e => e.y > H - 70)) {
+        lives = 0; state = 'gameover'; stateTimer = 0;
+        messageEl.textContent = 'ゲームオーバー ― タップ/SPACEでリスタート';
+        updateUI(); return;
+      }
+
+      enemyShootTimer++;
+      if (enemyShootTimer >= enemyShootInterval) {
+        enemyShootTimer = 0;
+        const shooter = alive[Math.floor(Math.random() * alive.length)];
+        enemyBullets.push({ x: shooter.x, y: shooter.y + 12, vy: 4 + stage * 0.5 });
+      }
+
+      ufo.timer++;
+      if (!ufo.active && ufo.timer > 400 + Math.random() * 300) {
+        ufo.active = true;
+        ufo.dir = Math.random() > 0.5 ? 1 : -1;
+        ufo.x = ufo.dir > 0 ? -30 : W + 30;
+        ufo.timer = 0;
+      }
+      if (ufo.active) {
+        ufo.x += ufo.dir * 2;
+        if (ufo.x < -50 || ufo.x > W + 50) ufo.active = false;
+      }
+
+      checkBulletEnemyCollision();
+      checkBulletUFOCollision();
+      checkBulletShieldCollision();
+      checkEnemyBulletPlayerCollision();
+
+      floatingScores = floatingScores.filter(f => { f.y -= 0.5; f.life--; return f.life > 0; });
+      updateUI();
+
+      if (state === 'stageclear') {
+        stateTimer++;
+        if (stateTimer > 120) { messageEl.textContent = ''; startStage(); }
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, W, H);
+
+      if (!draw.stars) {
+        draw.stars = Array.from({ length: 60 }, () => ({
+          x: Math.random() * W, y: Math.random() * H,
+          r: Math.random() * 1.5 + 0.3, b: Math.random() * 0.5 + 0.3,
+        }));
+      }
+      draw.stars.forEach(s => {
+        const blink = 0.6 + 0.4 * Math.sin(frameCount * 0.05 + s.b * 10);
+        ctx.fillStyle = `rgba(255,255,255,${blink * s.b})`;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+      });
+
+      ctx.strokeStyle = '#0a0'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, H - 30); ctx.lineTo(W, H - 30); ctx.stroke();
+
+      if (state === 'title') { drawTitle(); return; }
+
+      shields.forEach(drawShield);
+      enemies.forEach(e => { if (e.alive) drawInvader(e.x, e.y, e.type, e.frame); });
+      drawUFO();
+
+      if (state !== 'dead' || Math.floor(frameCount / 5) % 2 === 0) {
+        drawPlayer(player.x, player.y);
+      }
+
+      ctx.fillStyle = '#fff';
+      bullets.forEach(b => { ctx.fillRect(b.x - 1, b.y - 8, 3, 12); });
+
+      enemyBullets.forEach(b => {
+        ctx.fillStyle = '#f60';
+        const offset = Math.sin(b.y * 0.3) * 3;
+        ctx.fillRect(b.x + offset - 1, b.y - 5, 3, 10);
+      });
+
+      floatingScores.forEach(f => {
+        ctx.globalAlpha = f.life / 60;
+        ctx.fillStyle = '#ff0'; ctx.font = '14px Courier New'; ctx.textAlign = 'center';
+        ctx.fillText('+' + f.val, f.x, f.y);
+        ctx.globalAlpha = 1;
+      });
+
+      if (state === 'gameover') {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#f00'; ctx.font = 'bold 48px Courier New'; ctx.textAlign = 'center';
+        ctx.fillText('GAME OVER', W / 2, H / 2 - 20);
+        ctx.fillStyle = '#0f0'; ctx.font = '22px Courier New';
+        ctx.fillText('スコア: ' + score, W / 2, H / 2 + 30);
+        ctx.font = '14px Courier New'; ctx.fillStyle = '#0a0';
+        const blink = Math.floor(frameCount / 30) % 2 === 0;
+        if (blink) ctx.fillText('タップ / SPACE でリスタート', W / 2, H / 2 + 70);
+      }
+    }
+
+    function drawTitle() {
+      ctx.fillStyle = '#0f0'; ctx.font = 'bold 52px Courier New'; ctx.textAlign = 'center';
+      ctx.shadowColor = '#0f0'; ctx.shadowBlur = 20;
+      ctx.fillText('INVADER', W / 2, 160);
+      ctx.shadowBlur = 0;
+      ctx.font = '20px Courier New'; ctx.fillStyle = '#0a0';
+      ctx.fillText('スペースインベーダー', W / 2, 210);
+
+      [[W/2 - 80, 280, 2], [W/2, 280, 1], [W/2 + 80, 280, 0]].forEach(([x, y, t]) => {
+        drawInvader(x, y, t, Math.floor(frameCount / 20));
+      });
+
+      ctx.font = '16px Courier New'; ctx.fillStyle = '#0f0';
+      const blink = Math.floor(frameCount / 30) % 2 === 0;
+      if (blink) ctx.fillText('タップ / SPACE でスタート', W / 2, 370);
+
+      ctx.font = '13px Courier New'; ctx.fillStyle = '#060';
+      ctx.fillText('← → 移動  ｜  SPACE 発射', W / 2, 415);
+      ctx.fillText('モバイル: 画面下のボタンで操作', W / 2, 440);
+    }
+
+    function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+    state = 'title';
+    loop();
+  </script>
+</body>
+</html>

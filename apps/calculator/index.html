@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>電卓</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3e;
+      --accent: #6c63ff;
+      --text: #e2e4f0;
+      --muted: #8b90a7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    .calc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      overflow: hidden;
+      width: min(340px, 100vw - 32px);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+    .display {
+      padding: 28px 24px 20px;
+      background: var(--bg);
+      text-align: right;
+      min-height: 130px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+    .display-expr {
+      font-size: 0.85rem;
+      color: var(--muted);
+      min-height: 20px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .display-val {
+      font-size: 3rem;
+      font-weight: 300;
+      letter-spacing: -0.02em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: font-size 0.1s;
+    }
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+    }
+    .key {
+      background: #1e2235;
+      border: none;
+      color: var(--text);
+      font-size: 1.2rem;
+      font-weight: 500;
+      height: 76px;
+      cursor: pointer;
+      transition: filter 0.1s;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .key:active { filter: brightness(1.4); }
+    .key.fn  { background: #252a3e; color: var(--muted); }
+    .key.op  { background: #20213a; color: #a78bfa; font-size: 1.4rem; }
+    .key.eq  { background: var(--accent); color: #fff; font-size: 1.4rem; }
+    .key.eq:active { background: #5851d8; }
+    .key.zero { grid-column: span 2; justify-content: flex-start; padding-left: 28px; }
+  </style>
+</head>
+<body>
+<div class="calc">
+  <div class="display">
+    <div class="display-expr" id="expr"></div>
+    <div class="display-val" id="val">0</div>
+  </div>
+  <div class="keys">
+    <button class="key fn" data-key="clear">AC</button>
+    <button class="key fn" data-key="sign">+/−</button>
+    <button class="key fn" data-key="percent">%</button>
+    <button class="key op" data-key="÷">÷</button>
+    <button class="key" data-key="7">7</button>
+    <button class="key" data-key="8">8</button>
+    <button class="key" data-key="9">9</button>
+    <button class="key op" data-key="×">×</button>
+    <button class="key" data-key="4">4</button>
+    <button class="key" data-key="5">5</button>
+    <button class="key" data-key="6">6</button>
+    <button class="key op" data-key="−">−</button>
+    <button class="key" data-key="1">1</button>
+    <button class="key" data-key="2">2</button>
+    <button class="key" data-key="3">3</button>
+    <button class="key op" data-key="+">+</button>
+    <button class="key zero" data-key="0">0</button>
+    <button class="key" data-key=".">.</button>
+    <button class="key eq" data-key="=">=</button>
+  </div>
+</div>
+<script>
+  let cur = '0', prev = '', op = '', fresh = true;
+  const valEl = document.getElementById('val');
+  const exprEl = document.getElementById('expr');
+
+  function render() {
+    const s = cur.length > 14 ? (+cur).toExponential(5) : cur;
+    valEl.textContent = s;
+    valEl.style.fontSize = s.length > 12 ? '1.8rem' : s.length > 9 ? '2.2rem' : s.length > 7 ? '2.6rem' : '3rem';
+  }
+
+  function digit(d) {
+    if (fresh) { cur = d === '.' ? '0.' : d; fresh = false; }
+    else {
+      if (d === '.' && cur.includes('.')) return;
+      cur = (cur === '0' && d !== '.') ? d : cur.length < 15 ? cur + d : cur;
+    }
+    render();
+  }
+
+  function operate(o) {
+    if (op && !fresh) calc();
+    prev = cur; op = o; fresh = true;
+    exprEl.textContent = prev + ' ' + o;
+  }
+
+  function calc() {
+    if (!op || !prev) return;
+    const a = +prev, b = +cur;
+    const r = op === '+' ? a + b : op === '−' ? a - b : op === '×' ? a * b : b === 0 ? null : a / b;
+    exprEl.textContent = `${prev} ${op} ${cur} =`;
+    cur = r === null ? 'Error' : String(parseFloat(r.toFixed(10)));
+    op = ''; prev = ''; fresh = true;
+    render();
+  }
+
+  function handle(k) {
+    if ('0123456789'.includes(k) || k === '.') digit(k);
+    else if (['+','−','×','÷'].includes(k)) operate(k);
+    else if (k === '=') calc();
+    else if (k === 'clear') { cur = '0'; prev = ''; op = ''; fresh = true; exprEl.textContent = ''; render(); }
+    else if (k === 'sign') { cur = String(-parseFloat(cur)); render(); }
+    else if (k === 'percent') { cur = String(parseFloat(cur) / 100); render(); }
+    else if (k === 'backspace' && !fresh && cur !== 'Error') { cur = cur.length > 1 ? cur.slice(0,-1) : '0'; render(); }
+  }
+
+  document.querySelectorAll('.key').forEach(b => b.addEventListener('click', () => handle(b.dataset.key)));
+  document.addEventListener('keydown', e => {
+    const m = {'0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9',
+               '.':'.', '+':'+', '-':'−', '*':'×', '/':'÷', 'Enter':'=', '=':'=',
+               'Backspace':'backspace', 'Escape':'clear', '%':'percent'};
+    if (m[e.key]) { e.preventDefault(); handle(m[e.key]); }
+  });
+  render();
+</script>
+</body>
+</html>

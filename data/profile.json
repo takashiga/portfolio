@@ -1,0 +1,12 @@
+{
+  "name": "田中 貴博",
+  "nameEn": "Takahiro Tanaka",
+  "title": "ソフトウェアエンジニア",
+  "tagline": "シンプルで使いやすいものを作ることが好きです。",
+  "bio": "プログラミングが好きで、業務改善や自作アプリの開発に取り組んでいます。ゲームやツールを通じて、技術を楽しみながら学んでいます。",
+  "skills": ["JavaScript", "HTML / CSS", "Python", "その他のスキルをここに追加"],
+  "links": {
+    "github": "https://github.com/your-username",
+    "email": "takahiro.shiga.810@gmail.com"
+  }
+}

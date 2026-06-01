@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio</title>
+  <meta name="description" content="田中貴博のポートフォリオサイト" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- =================== Navigation =================== -->
+  <nav>
+    <div class="nav-inner">
+      <span class="nav-logo" id="nav-logo">Portfolio</span>
+      <ul class="nav-links">
+        <li><a href="#profile">About</a></li>
+        <li><a href="#apps">Works</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- =================== Profile Section =================== -->
+  <section id="profile">
+    <div class="container">
+      <div class="profile-inner">
+        <div class="profile-avatar" id="avatar-initials">T</div>
+        <div class="profile-content">
+
+          <h1 class="profile-name" id="profile-name">読み込み中...</h1>
+          <p class="profile-name-en" id="profile-name-en"></p>
+
+          <div class="profile-meta-row">
+            <span class="profile-title" id="profile-title"></span>
+            <span class="profile-birthday" id="profile-birthday"></span>
+          </div>
+
+          <p class="profile-tagline" id="profile-tagline"></p>
+          <p class="profile-bio" id="profile-bio"></p>
+
+          <div class="skills-list" id="skills-list"></div>
+
+          <!-- 取得資格 -->
+          <div class="certs-section" id="certs-section" style="display:none">
+            <h3 class="certs-heading">取得資格</h3>
+            <div class="certs-list" id="certs-list"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- =================== Apps Section =================== -->
+  <section id="apps" class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Works</h2>
+        <p class="section-subtitle">作ったアプリ・ゲームです。カードをクリックで開きます。</p>
+      </div>
+      <div class="apps-grid" id="apps-grid">
+        <p class="loading-placeholder">読み込み中...</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== Footer =================== -->
+  <footer>
+    <div class="footer-inner">
+      <p class="footer-copy" id="footer-copy"></p>
+    </div>
+  </footer>
+
+  <script src="data/profile.js"></script>
+  <script src="data/apps.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

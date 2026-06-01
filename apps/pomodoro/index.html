@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポモドーロタイマー</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3e;
+      --text: #e2e4f0;
+      --muted: #8b90a7;
+      --accent: #ef4444;
+      --ring: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 32px;
+      padding: 24px;
+    }
+
+    /* Mode tabs */
+    .modes {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
+    }
+    .mode-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .mode-btn.active {
+      background: var(--ring);
+      color: #fff;
+    }
+
+    /* Timer ring */
+    .timer-wrap {
+      position: relative;
+      width: 260px;
+      height: 260px;
+    }
+    .timer-svg {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+    }
+    .ring-bg { fill: none; stroke: var(--border); stroke-width: 8; }
+    .ring-progress {
+      fill: none;
+      stroke: var(--ring);
+      stroke-width: 8;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear, stroke 0.4s;
+    }
+    .timer-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .timer-time {
+      font-size: 3.2rem;
+      font-weight: 300;
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+    }
+    .timer-mode-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* Controls */
+    .controls { display: flex; gap: 12px; align-items: center; }
+    .ctrl-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 50%;
+      width: 52px; height: 52px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .ctrl-btn:hover { border-color: var(--ring); color: var(--ring); }
+    .ctrl-btn.primary {
+      background: var(--ring);
+      border-color: var(--ring);
+      color: #fff;
+      width: 68px; height: 68px;
+      font-size: 1.4rem;
+    }
+    .ctrl-btn.primary:hover { opacity: 0.85; }
+
+    /* Sessions */
+    .sessions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .sessions-label { font-size: 0.8rem; color: var(--muted); }
+    .dots { display: flex; gap: 6px; }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+    .dot.done { background: var(--ring); }
+
+    /* Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="modes">
+  <button class="mode-btn active" data-mode="work" data-min="25">🍅 ポモドーロ</button>
+  <button class="mode-btn" data-mode="short" data-min="5">☕ 短い休憩</button>
+  <button class="mode-btn" data-mode="long" data-min="15">🌿 長い休憩</button>
+</div>
+
+<div class="timer-wrap">
+  <svg class="timer-svg" viewBox="0 0 100 100">
+    <circle class="ring-bg" cx="50" cy="50" r="44"/>
+    <circle class="ring-progress" id="ring" cx="50" cy="50" r="44"
+      stroke-dasharray="276.46" stroke-dashoffset="0"/>
+  </svg>
+  <div class="timer-center">
+    <div class="timer-time" id="time-display">25:00</div>
+    <div class="timer-mode-label" id="mode-label">作業時間</div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" id="reset-btn" title="リセット">↺</button>
+  <button class="ctrl-btn primary" id="start-btn">▶</button>
+  <button class="ctrl-btn" id="skip-btn" title="スキップ">⏭</button>
+</div>
+
+<div class="sessions">
+  <div class="sessions-label" id="session-label">セッション 0 / 4</div>
+  <div class="dots" id="dots">
+    <div class="dot"></div><div class="dot"></div>
+    <div class="dot"></div><div class="dot"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const MODES = {
+    work:  { min: 25, label: '作業時間',  color: '#ef4444', bg: '#1a1010' },
+    short: { min: 5,  label: '短い休憩',  color: '#10b981', bg: '#0a1a12' },
+    long:  { min: 15, label: '長い休憩',  color: '#0ea5e9', bg: '#091624' },
+  };
+  const CIRCUMFERENCE = 2 * Math.PI * 44; // ≈ 276.46
+
+  let mode = 'work';
+  let totalSec, remainSec, running = false, timer = null, sessions = 0;
+  let audioCtx = null;
+
+  const ringEl       = document.getElementById('ring');
+  const timeEl       = document.getElementById('time-display');
+  const labelEl      = document.getElementById('mode-label');
+  const startBtn     = document.getElementById('start-btn');
+  const resetBtn     = document.getElementById('reset-btn');
+  const skipBtn      = document.getElementById('skip-btn');
+  const sessionLabel = document.getElementById('session-label');
+  const dotsEl       = document.getElementById('dots');
+  const toastEl      = document.getElementById('toast');
+
+  function fmt(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  }
+
+  function applyMode(m) {
+    mode = m;
+    const cfg = MODES[m];
+    totalSec = cfg.min * 60;
+    remainSec = totalSec;
+    running = false;
+    clearInterval(timer);
+    startBtn.textContent = '▶';
+    timeEl.textContent = fmt(remainSec);
+    labelEl.textContent = cfg.label;
+    ringEl.style.stroke = cfg.color;
+    ringEl.style.strokeDashoffset = '0';
+    document.documentElement.style.setProperty('--ring', cfg.color);
+    document.body.style.background = cfg.bg || 'var(--bg)';
+    document.querySelectorAll('.mode-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === m);
+    });
+  }
+
+  function updateRing() {
+    const pct = remainSec / totalSec;
+    ringEl.style.strokeDashoffset = CIRCUMFERENCE * (1 - pct);
+  }
+
+  function tick() {
+    if (remainSec <= 0) {
+      clearInterval(timer);
+      running = false;
+      startBtn.textContent = '▶';
+      beep();
+      if (mode === 'work') {
+        sessions = Math.min(sessions + 1, 4);
+        updateDots();
+        showToast('🍅 お疲れさまでした！休憩しましょう');
+        setTimeout(() => applyMode(sessions >= 4 ? 'long' : 'short'), 800);
+      } else {
+        showToast('☕ 休憩終了！作業を再開しましょう');
+        setTimeout(() => applyMode('work'), 800);
+      }
+      return;
+    }
+    remainSec--;
+    timeEl.textContent = fmt(remainSec);
+    updateRing();
+    document.title = fmt(remainSec) + ' — ポモドーロ';
+  }
+
+  startBtn.addEventListener('click', () => {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    running = !running;
+    startBtn.textContent = running ? '⏸' : '▶';
+    if (running) timer = setInterval(tick, 1000);
+    else clearInterval(timer);
+  });
+
+  resetBtn.addEventListener('click', () => {
+    clearInterval(timer);
+    applyMode(mode);
+  });
+
+  skipBtn.addEventListener('click', () => {
+    clearInterval(timer);
+    running = false;
+    remainSec = 0;
+    tick();
+  });
+
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      clearInterval(timer);
+      applyMode(b.dataset.mode);
+    });
+  });
+
+  function updateDots() {
+    sessionLabel.textContent = `セッション ${sessions} / 4`;
+    dotsEl.querySelectorAll('.dot').forEach((d, i) => {
+      d.classList.toggle('done', i < sessions);
+    });
+    if (sessions >= 4) sessions = 0;
+  }
+
+  function beep() {
+    if (!audioCtx) return;
+    const freqs = [523, 659, 784];
+    freqs.forEach((f, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value = f;
+      osc.type = 'sine';
+      const t = audioCtx.currentTime + i * 0.18;
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      osc.start(t); osc.stop(t + 0.3);
+    });
+  }
+
+  let toastTimer;
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3000);
+  }
+
+  applyMode('work');
+</script>
+</body>
+</html>

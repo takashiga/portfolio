@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>スネークゲーム</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3e;
+      --accent: #6c63ff;
+      --text: #e2e4f0;
+      --muted: #8b90a7;
+      --snake: #6c63ff;
+      --snake-head: #a78bfa;
+      --food: #f87171;
+      --grid: #1e2130;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 16px;
+      gap: 16px;
+    }
+    h1 { font-size: 1.3rem; letter-spacing: 0.04em; color: var(--text); }
+    .score-row {
+      display: flex;
+      gap: 32px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .score-row span { font-weight: 700; color: var(--text); margin-left: 4px; }
+    canvas {
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      display: block;
+      background: var(--grid);
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .d-row { display: flex; gap: 6px; }
+    .d-btn {
+      width: 48px; height: 48px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .d-btn:active { background: var(--border); }
+    .btn {
+      padding: 10px 28px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .hint { font-size: 0.78rem; color: var(--muted); text-align: center; }
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    #overlay h2 { font-size: 1.5rem; }
+    #overlay p { color: var(--muted); font-size: 0.9rem; }
+    #overlay .big-score { font-size: 2.5rem; font-weight: 700; color: var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>🐍 スネークゲーム</h1>
+  <div class="score-row">
+    <div>スコア <span id="score">0</span></div>
+    <div>ハイスコア <span id="hi">0</span></div>
+  </div>
+  <canvas id="c" width="400" height="400"></canvas>
+  <div class="controls">
+    <div class="d-row"><button class="d-btn" data-dir="UP">↑</button></div>
+    <div class="d-row">
+      <button class="d-btn" data-dir="LEFT">←</button>
+      <button class="d-btn" data-dir="DOWN">↓</button>
+      <button class="d-btn" data-dir="RIGHT">→</button>
+    </div>
+  </div>
+  <p class="hint">キーボード: 矢印キー / WASD &nbsp;|&nbsp; タッチ: ボタンで操作</p>
+
+  <div id="overlay">
+    <h2 id="ov-title">🐍 スネークゲーム</h2>
+    <p id="ov-msg">矢印キー / WASD / ボタンで操作</p>
+    <div class="big-score" id="ov-score" style="display:none"></div>
+    <button class="btn" id="start-btn">ゲームスタート</button>
+  </div>
+
+<script>
+const COLS = 20, ROWS = 20;
+const CELL = 400 / COLS;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let snake, dir, nextDir, food, score, hiScore = 0, interval, running = false;
+
+const DIR = { UP:[0,-1], DOWN:[0,1], LEFT:[-1,0], RIGHT:[1,0] };
+const OPP = { UP:'DOWN', DOWN:'UP', LEFT:'RIGHT', RIGHT:'LEFT' };
+
+function rand(n){ return Math.floor(Math.random()*n); }
+
+function newFood(){
+  let pos;
+  do { pos = {x:rand(COLS),y:rand(ROWS)}; }
+  while (snake.some(s=>s.x===pos.x&&s.y===pos.y));
+  return pos;
+}
+
+function init(){
+  snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+  dir = DIR.RIGHT; nextDir = DIR.RIGHT;
+  food = newFood();
+  score = 0;
+  document.getElementById('score').textContent = 0;
+}
+
+function draw(){
+  ctx.clearRect(0,0,400,400);
+  // grid
+  ctx.strokeStyle = '#1e2130';
+  for(let i=0;i<=COLS;i++){
+    ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,400); ctx.stroke();
+  }
+  for(let j=0;j<=ROWS;j++){
+    ctx.beginPath(); ctx.moveTo(0,j*CELL); ctx.lineTo(400,j*CELL); ctx.stroke();
+  }
+  // food
+  const fx = food.x*CELL+CELL/2, fy = food.y*CELL+CELL/2;
+  ctx.fillStyle = '#f87171';
+  ctx.beginPath(); ctx.arc(fx,fy,CELL/2-3,0,Math.PI*2); ctx.fill();
+  // snake
+  snake.forEach((s,i)=>{
+    ctx.fillStyle = i===0 ? '#a78bfa' : '#6c63ff';
+    const r = i===0 ? 6 : 4;
+    const x=s.x*CELL, y=s.y*CELL;
+    ctx.beginPath();
+    ctx.roundRect(x+1,y+1,CELL-2,CELL-2,r);
+    ctx.fill();
+  });
+}
+
+function step(){
+  dir = nextDir;
+  const head = {x: snake[0].x+dir[0], y: snake[0].y+dir[1]};
+  // wall check
+  if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS){
+    gameOver(); return;
+  }
+  // self check
+  if(snake.some(s=>s.x===head.x&&s.y===head.y)){
+    gameOver(); return;
+  }
+  snake.unshift(head);
+  if(head.x===food.x&&head.y===food.y){
+    score++;
+    document.getElementById('score').textContent = score;
+    if(score>hiScore){
+      hiScore=score;
+      document.getElementById('hi').textContent = hiScore;
+    }
+    food = newFood();
+  } else {
+    snake.pop();
+  }
+  draw();
+}
+
+function startGame(){
+  document.getElementById('overlay').style.display='none';
+  init();
+  draw();
+  if(interval) clearInterval(interval);
+  interval = setInterval(step, 120);
+  running = true;
+}
+
+function gameOver(){
+  clearInterval(interval);
+  running = false;
+  const ov = document.getElementById('overlay');
+  document.getElementById('ov-title').textContent = 'ゲームオーバー';
+  document.getElementById('ov-msg').textContent = 'お疲れさまでした！';
+  const sc = document.getElementById('ov-score');
+  sc.style.display='block';
+  sc.textContent = score + ' pt';
+  document.getElementById('start-btn').textContent = 'もう一度';
+  ov.style.display='flex';
+}
+
+// Keyboard
+document.addEventListener('keydown', e=>{
+  const map = {ArrowUp:'UP',ArrowDown:'DOWN',ArrowLeft:'LEFT',ArrowRight:'RIGHT',
+               w:'UP',s:'DOWN',a:'LEFT',d:'RIGHT',
+               W:'UP',S:'DOWN',A:'LEFT',D:'RIGHT'};
+  const d = map[e.key];
+  if(d && OPP[d] !== Object.keys(DIR).find(k=>DIR[k]===dir)) {
+    if(d && (!running||(OPP[d]!==Object.keys(DIR).find(k=>JSON.stringify(DIR[k])===JSON.stringify(dir))))){
+      const nd = DIR[d];
+      if(!(nd[0]===-dir[0]&&nd[1]===-dir[1])) nextDir = nd;
+    }
+    e.preventDefault();
+  }
+});
+
+// D-pad buttons
+document.querySelectorAll('.d-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const d = btn.dataset.dir;
+    const nd = DIR[d];
+    if(nd && !(nd[0]===-dir[0]&&nd[1]===-dir[1])) nextDir = nd;
+  });
+});
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+</script>
+</body>
+</html>

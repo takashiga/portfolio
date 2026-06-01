@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>神経衰弱</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2a2d3e;
+      --accent: #6c63ff;
+      --text: #e2e4f0;
+      --muted: #8b90a7;
+      --matched: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+      gap: 20px;
+    }
+    h1 { font-size: 1.3rem; }
+    .stats {
+      display: flex;
+      gap: 32px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .stats span { font-weight: 700; color: var(--text); margin-left: 4px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .card {
+      aspect-ratio: 1;
+      cursor: pointer;
+      perspective: 600px;
+    }
+    .card-inner {
+      width: 100%; height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.35s ease;
+      border-radius: 10px;
+    }
+    .card.flipped .card-inner,
+    .card.matched .card-inner {
+      transform: rotateY(180deg);
+    }
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border: 2px solid var(--border);
+    }
+    .card-back {
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 1.4rem;
+    }
+    .card-front {
+      background: var(--surface2);
+      transform: rotateY(180deg);
+    }
+    .card.matched .card-face {
+      border-color: var(--matched);
+    }
+    .card.matched .card-front {
+      background: rgba(34,197,94,0.1);
+    }
+    .btn {
+      padding: 10px 28px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    #message {
+      font-size: 1rem;
+      color: var(--muted);
+      min-height: 1.4em;
+      text-align: center;
+    }
+    #message.win { color: var(--matched); font-weight: 700; font-size: 1.15rem; }
+  </style>
+</head>
+<body>
+  <h1>🃏 神経衰弱</h1>
+  <div class="stats">
+    <div>手数 <span id="moves">0</span></div>
+    <div>残りペア <span id="remain">8</span></div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <p id="message">カードをクリックしてスタート！</p>
+  <button class="btn" id="restart-btn">シャッフル</button>
+
+<script>
+const EMOJIS = ['🌸','⚡','🎯','🚀','🌙','🦊','🎸','🍀'];
+let cards = [], flipped = [], moves = 0, matched = 0, locked = false;
+
+function shuffle(arr){
+  const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a;
+}
+
+function init(){
+  const pairs = shuffle([...EMOJIS,...EMOJIS]);
+  cards = pairs.map((emoji,i)=>({id:i,emoji,flipped:false,matched:false}));
+  moves=0; matched=0; flipped=[]; locked=false;
+  document.getElementById('moves').textContent=0;
+  document.getElementById('remain').textContent=EMOJIS.length;
+  document.getElementById('message').textContent='カードをクリックしてスタート！';
+  document.getElementById('message').className='';
+  render();
+}
+
+function render(){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  cards.forEach(card=>{
+    const el=document.createElement('div');
+    el.className='card'+(card.flipped?' flipped':'')+(card.matched?' matched':'');
+    el.innerHTML=`
+      <div class="card-inner">
+        <div class="card-face card-back">？</div>
+        <div class="card-face card-front">${card.emoji}</div>
+      </div>`;
+    if(!card.matched) el.addEventListener('click',()=>clickCard(card.id));
+    grid.appendChild(el);
+  });
+}
+
+function clickCard(id){
+  if(locked) return;
+  const card=cards[id];
+  if(card.flipped||card.matched) return;
+  card.flipped=true;
+  flipped.push(id);
+  renderCard(id);
+
+  if(flipped.length===2){
+    locked=true;
+    moves++;
+    document.getElementById('moves').textContent=moves;
+    const [a,b]=flipped;
+    if(cards[a].emoji===cards[b].emoji){
+      setTimeout(()=>{
+        cards[a].matched=cards[b].matched=true;
+        cards[a].flipped=cards[b].flipped=false;
+        matched++;
+        document.getElementById('remain').textContent=EMOJIS.length-matched;
+        flipped=[];
+        locked=false;
+        renderCard(a); renderCard(b);
+        if(matched===EMOJIS.length){
+          const msg=document.getElementById('message');
+          msg.textContent=`🎉 クリア！ ${moves}手でコンプリート！`;
+          msg.className='win';
+        }
+      },500);
+    } else {
+      setTimeout(()=>{
+        cards[a].flipped=cards[b].flipped=false;
+        flipped=[]; locked=false;
+        renderCard(a); renderCard(b);
+        document.getElementById('message').textContent='残念、違います。もう一度！';
+      },900);
+    }
+  } else {
+    document.getElementById('message').textContent='もう1枚めくってください。';
+  }
+}
+
+function renderCard(id){
+  const grid=document.getElementById('grid');
+  const el=grid.children[id];
+  const card=cards[id];
+  el.className='card'+(card.flipped?' flipped':'')+(card.matched?' matched':'');
+}
+
+document.getElementById('restart-btn').addEventListener('click',init);
+init();
+</script>
+</body>
+</html>

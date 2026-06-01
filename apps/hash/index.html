@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>テキスト変換ツール</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #20243a;
+      --border: #2a2d3e;
+      --accent: #f59e0b;
+      --text: #e2e4f0;
+      --muted: #8b90a7;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 28px 16px;
+    }
+    .page { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    h1 { font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    h1 span { font-size: 1.8rem; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .card-head h2 { font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
+    .char-count { font-size: 0.78rem; color: var(--muted); }
+
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      padding: 12px 14px;
+      resize: vertical;
+      min-height: 120px;
+      outline: none;
+      line-height: 1.6;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: var(--accent); }
+
+    /* Conversion grid */
+    .conv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 540px) { .conv-grid { grid-template-columns: 1fr; } }
+
+    .conv-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .conv-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .conv-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn.copied { border-color: #22c55e; color: #22c55e; }
+    .conv-output {
+      padding: 12px 14px;
+      font-size: 0.82rem;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      word-break: break-all;
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 52px;
+      white-space: pre-wrap;
+    }
+    .conv-output.muted { color: var(--muted); font-style: italic; font-family: inherit; }
+
+    /* SHA full-width items */
+    .conv-item.full { grid-column: 1 / -1; }
+
+    .error { color: #f87171; font-style: italic; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1><span>🔐</span> テキスト変換ツール</h1>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>入力テキスト</h2>
+      <span class="char-count" id="char-count">0 文字 / 0 バイト</span>
+    </div>
+    <textarea id="input" placeholder="変換したいテキストをここに入力してください…"></textarea>
+  </div>
+
+  <div class="conv-grid">
+    <div class="conv-item">
+      <div class="conv-header">
+        <span class="conv-name">Base64 エンコード</span>
+        <button class="copy-btn" data-target="out-b64enc">コピー</button>
+      </div>
+      <div class="conv-output muted" id="out-b64enc">テキストを入力すると表示されます</div>
+    </div>
+
+    <div class="conv-item">
+      <div class="conv-header">
+        <span class="conv-name">Base64 デコード</span>
+        <button class="copy-btn" data-target="out-b64dec">コピー</button>
+      </div>
+      <div class="conv-output muted" id="out-b64dec">テキストを入力すると表示されます</div>
+    </div>
+
+    <div class="conv-item">
+      <div class="conv-header">
+        <span class="conv-name">URL エンコード</span>
+        <button class="copy-btn" data-target="out-urlenc">コピー</button>
+      </div>
+      <div class="conv-output muted" id="out-urlenc">テキストを入力すると表示されます</div>
+    </div>
+
+    <div class="conv-item">
+      <div class="conv-header">
+        <span class="conv-name">URL デコード</span>
+        <button class="copy-btn" data-target="out-urldec">コピー</button>
+      </div>
+      <div class="conv-output muted" id="out-urldec">テキストを入力すると表示されます</div>
+    </div>
+
+    <div class="conv-item">
+      <div class="conv-header">
+        <span class="conv-name">文字列を逆順</span>
+        <button class="copy-btn" data-target="out-rev">コピー</button>
+      </div>
+      <div class="conv-output muted" id="out-rev">テキストを入力すると表示されます</div>
+    </div>
+
+    <div class="conv-item">
+      <div class="conv-header">
+        <span class="conv-name">ROT13</span>
+        <button class="copy-btn" data-target="out-rot13">コピー</button>
+      </div>
+      <div class="conv-output muted" id="out-rot13">テキストを入力すると表示されます</div>
+    </div>
+
+    <div class="conv-item full">
+      <div class="conv-header">
+        <span class="conv-name">SHA-256</span>
+        <button class="copy-btn" data-target="out-sha256">コピー</button>
+      </div>
+      <div class="conv-output muted" id="out-sha256">テキストを入力すると表示されます</div>
+    </div>
+
+    <div class="conv-item full">
+      <div class="conv-header">
+        <span class="conv-name">SHA-512</span>
+        <button class="copy-btn" data-target="out-sha512">コピー</button>
+      </div>
+      <div class="conv-output muted" id="out-sha512">テキストを入力すると表示されます</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const inputEl = document.getElementById('input');
+  const EMPTY_MSG = 'テキストを入力すると表示されます';
+
+  function set(id, val, isEmpty) {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    el.className = 'conv-output' + (isEmpty ? ' muted' : '');
+  }
+
+  function rot13(s) {
+    return s.replace(/[a-zA-Z]/g, c => {
+      const base = c <= 'Z' ? 65 : 97;
+      return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
+    });
+  }
+
+  async function bufToHex(buf) {
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function sha(algo, text) {
+    try {
+      const enc = new TextEncoder().encode(text);
+      const buf = await crypto.subtle.digest(algo, enc);
+      return bufToHex(buf);
+    } catch {
+      return null;
+    }
+  }
+
+  async function update() {
+    const text = inputEl.value;
+    const bytes = new TextEncoder().encode(text).length;
+    document.getElementById('char-count').textContent = `${text.length} 文字 / ${bytes} バイト`;
+
+    if (!text) {
+      ['out-b64enc','out-b64dec','out-urlenc','out-urldec','out-rev','out-rot13','out-sha256','out-sha512']
+        .forEach(id => set(id, EMPTY_MSG, true));
+      return;
+    }
+
+    // Base64 encode
+    try { set('out-b64enc', btoa(unescape(encodeURIComponent(text))), false); }
+    catch { set('out-b64enc', '(エンコード失敗)', false); }
+
+    // Base64 decode
+    try { set('out-b64dec', decodeURIComponent(escape(atob(text))), false); }
+    catch { set('out-b64dec', '(有効な Base64 ではありません)', false); }
+
+    // URL encode / decode
+    set('out-urlenc', encodeURIComponent(text), false);
+    try { set('out-urldec', decodeURIComponent(text), false); }
+    catch { set('out-urldec', '(有効な URL エンコードではありません)', false); }
+
+    // Reverse
+    set('out-rev', [...text].reverse().join(''), false);
+
+    // ROT13
+    set('out-rot13', rot13(text), false);
+
+    // SHA
+    const [s256, s512] = await Promise.all([sha('SHA-256', text), sha('SHA-512', text)]);
+    set('out-sha256', s256 ?? '(このブラウザでは SHA-256 を計算できません)', !s256);
+    set('out-sha512', s512 ?? '(このブラウザでは SHA-512 を計算できません)', !s512);
+  }
+
+  inputEl.addEventListener('input', update);
+
+  // Copy buttons
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const text = document.getElementById(btn.dataset.target).textContent;
+      if (!text || text === EMPTY_MSG) return;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✓ コピー済み';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 1800);
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        btn.textContent = '✓ コピー済み';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 1800);
+      });
+    });
+  });
+</script>
+</body>
+</html>

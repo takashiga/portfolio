@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>パス変換ツール</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #20243a;
+      --border: #2a2d3e;
+      --accent: #10b981;
+      --text: #e2e4f0;
+      --muted: #8b90a7;
+      --radius: 10px;
+      --err: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 28px 16px 48px;
+    }
+    .page { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    h1 { font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    h1 span { font-size: 1.8rem; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+    .card-head h2 { font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
+
+    /* Toggle group */
+    .toggle-group { display: flex; gap: 4px; }
+    .toggle-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 5px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .toggle-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* Inputs */
+    label { display: block; font-size: 0.78rem; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; text-transform: uppercase; }
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    input[type="text"], textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 100px; line-height: 1.7; }
+
+    .base-hint {
+      margin-top: 6px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .base-hint .detected {
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.25);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 1px 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    /* Results */
+    #results-card { display: none; }
+    .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .results-header h2 { font-size: 0.8rem; letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
+    .copy-all-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .copy-all-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-all-btn.copied { border-color: var(--accent); color: var(--accent); }
+
+    .result-list { display: flex; flex-direction: column; gap: 8px; }
+    .result-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .result-row.error { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.05); }
+    .result-meta { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .result-path {
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.88rem;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+    .result-path.error-text { color: var(--err); font-size: 0.82rem; font-style: italic; font-family: inherit; }
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn.copied { border-color: var(--accent); color: var(--accent); }
+    .copy-btn:disabled { opacity: 0.3; cursor: default; }
+
+    /* Tips */
+    .tips { font-size: 0.78rem; color: var(--muted); line-height: 1.9; }
+    .tips code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      color: var(--accent);
+      font-size: 0.82em;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1><span>🔗</span> パス変換ツール</h1>
+
+  <!-- 設定カード -->
+  <div class="card">
+    <div class="card-head">
+      <h2>モード</h2>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div class="toggle-group" id="mode-group">
+          <button class="toggle-btn active" data-mode="file">📁 ファイルパス</button>
+          <button class="toggle-btn" data-mode="url">🌐 URL</button>
+        </div>
+        <div class="toggle-group" id="os-group">
+          <button class="toggle-btn active" data-os="windows">🪟 Windows</button>
+          <button class="toggle-btn" data-os="unix">🐧 Unix / Mac</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>ベースパス（基準となるファイルまたはディレクトリ）</label>
+      <input type="text" id="base-input"
+             placeholder="例: C:\Users\takahiro\projects\app\src\components\Button.jsx">
+      <div class="base-hint">
+        <span id="base-detected"></span>
+        <span id="base-type-hint"></span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>相対パス（複数可・1行に1つ）</label>
+      <textarea id="rel-input"
+                placeholder="例:&#10;../../utils/helper.js&#10;../styles/main.css&#10;./config.json"></textarea>
+    </div>
+  </div>
+
+  <!-- 結果カード -->
+  <div class="card" id="results-card">
+    <div class="results-header">
+      <h2>変換結果</h2>
+      <button class="copy-all-btn" id="copy-all-btn">すべてコピー</button>
+    </div>
+    <div class="result-list" id="result-list"></div>
+  </div>
+
+  <!-- Tips -->
+  <div class="card tips">
+    <b>使い方のヒント</b><br>
+    ・ベースパスにファイルを指定すると、そのファイルが置かれているディレクトリを基準に解決します。<br>
+    ・ベースパスにディレクトリを指定する場合は末尾に <code>\</code> または <code>/</code> を付けてください。<br>
+    ・<code>../</code> で親ディレクトリ、<code>./</code> で同じディレクトリを意味します。<br>
+    ・相対パスが絶対パスの場合はそのまま返します。
+  </div>
+</div>
+
+<script>
+  let mode = 'file';  // 'file' | 'url'
+  let os   = 'windows';
+
+  // ── Toggle ────────────────────────────────────────────
+  document.getElementById('mode-group').addEventListener('click', e => {
+    const btn = e.target.closest('.toggle-btn');
+    if (!btn) return;
+    mode = btn.dataset.mode;
+    document.querySelectorAll('#mode-group .toggle-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('os-group').style.visibility = mode === 'file' ? 'visible' : 'hidden';
+    const ph = mode === 'url'
+      ? 'https://example.com/app/pages/about.html'
+      : (os === 'windows' ? 'C:\\Users\\takahiro\\projects\\app\\src\\components\\Button.jsx' : '/home/user/projects/app/src/components/Button.jsx');
+    document.getElementById('base-input').placeholder = ph;
+    convert();
+  });
+
+  document.getElementById('os-group').addEventListener('click', e => {
+    const btn = e.target.closest('.toggle-btn');
+    if (!btn) return;
+    os = btn.dataset.os;
+    document.querySelectorAll('#os-group .toggle-btn').forEach(b => b.classList.toggle('active', b === btn));
+    const ph = os === 'windows'
+      ? 'C:\\Users\\takahiro\\projects\\app\\src\\components\\Button.jsx'
+      : '/home/user/projects/app/src/components/Button.jsx';
+    document.getElementById('base-input').placeholder = ph;
+    convert();
+  });
+
+  document.getElementById('base-input').addEventListener('input', convert);
+  document.getElementById('rel-input').addEventListener('input', convert);
+
+  // ── Path Resolver ─────────────────────────────────────
+  function normalizeSep(p, targetOs) {
+    return targetOs === 'windows' ? p.replace(/\//g, '\\') : p.replace(/\\/g, '/');
+  }
+
+  function isAbsoluteFile(p, targetOs) {
+    if (targetOs === 'windows') return /^[A-Za-z]:[\\\/]/.test(p) || p.startsWith('\\\\');
+    return p.startsWith('/');
+  }
+
+  function getBaseDir(base, targetOs) {
+    const sep = targetOs === 'windows' ? '\\' : '/';
+    base = normalizeSep(base.trim(), targetOs);
+    if (base.endsWith(sep)) return base;
+    const ext = base.split(sep).pop();
+    return ext.includes('.') ? base.substring(0, base.lastIndexOf(sep) + 1) : base + sep;
+  }
+
+  function resolveFilePath(base, relative, targetOs) {
+    const sep = targetOs === 'windows' ? '\\' : '/';
+    relative = normalizeSep(relative.trim(), targetOs);
+    base     = normalizeSep(base.trim(),     targetOs);
+
+    if (!base) return null;
+
+    if (isAbsoluteFile(relative, targetOs)) return relative;
+
+    const baseDir = getBaseDir(base, targetOs);
+    const joined  = baseDir + relative;
+
+    // Split into parts
+    let parts;
+    let prefix = '';
+    if (targetOs === 'windows') {
+      if (/^[A-Za-z]:/.test(joined)) {
+        prefix = joined.slice(0, 2);  // e.g. "C:"
+        parts = joined.slice(2).split('\\').filter(Boolean);
+      } else {
+        parts = joined.split('\\').filter(Boolean);
+      }
+    } else {
+      parts = joined.split('/').filter(Boolean);
+    }
+
+    const resolved = [];
+    for (const part of parts) {
+      if (part === '..') {
+        if (resolved.length > 0) resolved.pop();
+      } else if (part !== '.') {
+        resolved.push(part);
+      }
+    }
+
+    if (targetOs === 'windows') return prefix + '\\' + resolved.join('\\');
+    return '/' + resolved.join('/');
+  }
+
+  function resolveUrl(base, relative) {
+    try {
+      return new URL(relative.trim(), base.trim()).href;
+    } catch {
+      return null;
+    }
+  }
+
+  // ── Base hint ─────────────────────────────────────────
+  function updateBaseHint(base) {
+    const detectedEl = document.getElementById('base-detected');
+    const hintEl     = document.getElementById('base-type-hint');
+    if (!base.trim()) { detectedEl.textContent = ''; hintEl.textContent = ''; return; }
+
+    if (mode === 'url') {
+      try { new URL(base); detectedEl.innerHTML = '<span class="detected">有効なURL</span>'; }
+      catch { detectedEl.innerHTML = '<span class="detected" style="background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.3);color:#f87171">無効なURL</span>'; }
+      hintEl.textContent = '';
+      return;
+    }
+
+    const sep = os === 'windows' ? '\\' : '/';
+    const normalized = normalizeSep(base.trim(), os);
+    const endsWithSep = normalized.endsWith(sep);
+    const lastPart = normalized.split(sep).pop();
+    const isDir = endsWithSep || !lastPart.includes('.');
+    detectedEl.innerHTML = `<span class="detected">${isDir ? 'ディレクトリ' : 'ファイル'} と判定</span>`;
+    hintEl.textContent = isDir ? '末尾の区切り文字を基準に解決します' : 'ファイルの親ディレクトリを基準に解決します';
+  }
+
+  // ── Main convert ──────────────────────────────────────
+  function convert() {
+    const base = document.getElementById('base-input').value;
+    updateBaseHint(base);
+
+    const relLines = document.getElementById('rel-input').value
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean);
+
+    const resultsCard = document.getElementById('results-card');
+    const resultList  = document.getElementById('result-list');
+
+    if (!base.trim() || relLines.length === 0) {
+      resultsCard.style.display = 'none';
+      return;
+    }
+
+    resultsCard.style.display = '';
+    resultList.innerHTML = relLines.map(rel => {
+      let resolved;
+      if (mode === 'url') resolved = resolveUrl(base, rel);
+      else                resolved = resolveFilePath(base, rel, os);
+
+      if (!resolved) {
+        return `
+          <div class="result-row error">
+            <div>
+              <div class="result-meta">${escHtml(rel)}</div>
+              <div class="result-path error-text">変換できませんでした（入力を確認してください）</div>
+            </div>
+            <button class="copy-btn" disabled>コピー</button>
+          </div>`;
+      }
+
+      return `
+        <div class="result-row">
+          <div>
+            <div class="result-meta">${escHtml(rel)}</div>
+            <div class="result-path">${escHtml(resolved)}</div>
+          </div>
+          <button class="copy-btn" data-val="${escAttr(resolved)}">コピー</button>
+        </div>`;
+    }).join('');
+
+    // Individual copy buttons
+    resultList.querySelectorAll('.copy-btn:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', () => copyText(btn.dataset.val, btn));
+    });
+  }
+
+  // Copy all
+  document.getElementById('copy-all-btn').addEventListener('click', () => {
+    const paths = [...document.querySelectorAll('.result-path:not(.error-text)')]
+      .map(el => el.textContent).join('\n');
+    if (!paths) return;
+    copyText(paths, document.getElementById('copy-all-btn'));
+  });
+
+  function copyText(text, btn) {
+    const original = btn.textContent;
+    navigator.clipboard.writeText(text).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+    });
+    btn.textContent = '✓ コピー済み';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
+  }
+
+  function escHtml(s)  { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s)  { return s.replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>

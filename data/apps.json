@@ -1,0 +1,38 @@
+[
+  {
+    "id": "snake",
+    "title": "スネークゲーム",
+    "description": "クラシックなスネークゲームです。矢印キーまたはWASDで操作。どこまでスコアを伸ばせるか挑戦してみてください。",
+    "tags": ["ゲーム", "JavaScript"],
+    "thumbnail": "🐍",
+    "path": "apps/snake/index.html",
+    "featured": true
+  },
+  {
+    "id": "memory",
+    "title": "神経衰弱",
+    "description": "カードをめくって同じ絵柄のペアを見つけるメモリーゲームです。全ペアを最少手数で揃えましょう。",
+    "tags": ["ゲーム", "JavaScript"],
+    "thumbnail": "🃏",
+    "path": "apps/memory/index.html",
+    "featured": true
+  },
+  {
+    "id": "invader",
+    "title": "インベーダーゲーム",
+    "description": "往年のアーケードゲームを再現。迫りくるエイリアンを撃ち落とせ！ステージが上がるほど敵が速くなります。",
+    "tags": ["ゲーム", "JavaScript"],
+    "thumbnail": "👾",
+    "path": "apps/invader/index.html",
+    "featured": true
+  },
+  {
+    "id": "tetris",
+    "title": "テトリス",
+    "description": "落ちてくるブロックを積んでラインを消すパズルゲーム。ゴーストブロック表示でテクニカルなプレイが楽しめます。",
+    "tags": ["ゲーム", "JavaScript"],
+    "thumbnail": "🧩",
+    "path": "apps/tetris/index.html",
+    "featured": true
+  }
+]
